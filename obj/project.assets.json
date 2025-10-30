@@ -3470,24 +3470,32 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ricardo.perdigao\\.nuget\\packages\\": {}
+    "C:\\Users\\ralph\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\NewExtension\\MCPExtension\\MCPExtension.csproj",
+      "projectUniqueName": "D:\\MendixDevelopment\\EPIUSE\\MCPExtension\\MCPExtension.csproj",
       "projectName": "MCPExtension",
-      "projectPath": "C:\\NewExtension\\MCPExtension\\MCPExtension.csproj",
-      "packagesPath": "C:\\Users\\ricardo.perdigao\\.nuget\\packages\\",
-      "outputPath": "C:\\NewExtension\\MCPExtension\\obj\\",
+      "projectPath": "D:\\MendixDevelopment\\EPIUSE\\MCPExtension\\MCPExtension.csproj",
+      "packagesPath": "C:\\Users\\ralph\\.nuget\\packages\\",
+      "outputPath": "D:\\MendixDevelopment\\EPIUSE\\MCPExtension\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\ricardo.perdigao\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\ralph\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -3506,7 +3514,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.300"
+      "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
       "net8.0": {
@@ -3557,7 +3565,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100-rc.2.25502.107/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -570,6 +570,7 @@ namespace MCPExtension.MCP
                 "save_data" => "Generate realistic sample data for Mendix domain model entities",
                 "generate_overview_pages" => "Generate overview pages for entities",
                 "list_microflows" => "List all microflows in a module",
+                "list_modules" => "List all modules in the Mendix project with basic information",
                 "get_last_error" => "Get details about the last error",
                 "list_available_tools" => "List all available tools",
                 "debug_info" => "Get comprehensive debug information about the domain model",
@@ -813,6 +814,12 @@ namespace MCPExtension.MCP
                         module_name = new { type = "string" }
                     },
                     required = new[] { "module_name" }
+                },
+                "list_modules" => new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[0]
                 },
                 "get_last_error" => new
                 {

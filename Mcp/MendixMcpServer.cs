@@ -136,11 +136,16 @@ namespace MCPExtension
                 var result = await additionalTools.ListMicroflows(parameters);
                 return (object)result;
             });
-            _mcpServer.RegisterTool("get_last_error", async (JsonObject parameters) => 
+            _mcpServer.RegisterTool("list_modules", async (JsonObject parameters) => 
             {
-                var result = await additionalTools.GetLastError(parameters);
-                return (object)result;
+              var result = await additionalTools.ListModules(parameters);
+            return (object)result;
             });
+      _mcpServer.RegisterTool("get_last_error", async (JsonObject parameters) => 
+            {
+      var result = await additionalTools.GetLastError(parameters);
+      return (object)result;
+ });
             _mcpServer.RegisterTool("list_available_tools", async (JsonObject parameters) => 
             {
                 var result = await additionalTools.ListAvailableTools(parameters);
@@ -157,24 +162,24 @@ namespace MCPExtension
                 return (object)result;
             });
 
-            // Register create_microflow tool with special handling
-            _mcpServer.RegisterTool("create_microflow", async (JsonObject parameters) => 
-            {
-                // Create a specialized microflow handler that has access to IMicroflowService and IServiceProvider
-                var microflowService = _serviceProvider.GetRequiredService<IMicroflowService>();
-                var result = await additionalTools.CreateMicroflowWithService(parameters, microflowService, _serviceProvider);
-                return (object)result;
-            });
+            // TODO: Re-enable create_microflow when CreateMicroflowWithService method is fully restored
+            // _mcpServer.RegisterTool("create_microflow", async (JsonObject parameters) => 
+            // {
+            //     // Create a specialized microflow handler that has access to IMicroflowService and IServiceProvider
+            //     var microflowService = _serviceProvider.GetRequiredService<IMicroflowService>();
+            //     var result = await additionalTools.CreateMicroflowWithService(parameters, microflowService, _serviceProvider);
+            //     return (object)result;
+            // });
 
-            // Register create_microflow_activities tool (replaces both individual and sequence)
-            _mcpServer.RegisterTool("create_microflow_activities", async (JsonObject parameters) => 
-            {
-                _logger.LogInformation("=== MCP Tool create_microflow_activities Called ===");
-                _logger.LogInformation($"Parameters received in MCP server: {parameters?.ToJsonString()}");
-                var result = await additionalTools.CreateMicroflowActivitiesSequence(parameters);
-                _logger.LogInformation($"Result from CreateMicroflowActivitiesSequence: {result}");
-                return (object)result;
-            });
+            // TODO: Re-enable create_microflow_activities when CreateMicroflowActivitiesSequence method is implemented
+            // _mcpServer.RegisterTool("create_microflow_activities", async (JsonObject parameters) => 
+            // {
+            //     _logger.LogInformation("=== MCP Tool create_microflow_activities Called ===");
+            //     _logger.LogInformation($"Parameters received in MCP server: {parameters?.ToJsonString()}");
+            //     var result = await additionalTools.CreateMicroflowActivitiesSequence(parameters);
+            //     _logger.LogInformation($"Result from CreateMicroflowActivitiesSequence: {result}");
+            //     return (object)result;
+            // });
 
             _logger.LogInformation("MCP tools registered successfully");
         }
@@ -215,7 +220,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 17, // Updated number of registered tools (unified create_microflow_activities)
+                registeredTools = 17, // Updated number of registered tools (added list_modules, removed create_microflow_activities temporarily)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",
