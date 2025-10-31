@@ -111,110 +111,174 @@ namespace MCPExtension.Tools
             }
         }
 
+        /// <summary>
+        /// Gets a module by name with proper error handling and helpful messages
+        /// </summary>
+        private (IModule? module, string? error) GetModuleByName(string? moduleName)
+        {
+     if (string.IsNullOrWhiteSpace(moduleName))
+            {
+           var availableModules = _model.Root.GetModules()
+          .Where(m => m != null && !m.FromAppStore)
+          .Select(m => m.Name)
+                  .ToList();
+
+           var errorMessage = JsonSerializer.Serialize(new
+   {
+   error = "Module name is required",
+     message = "Please provide a 'module_name' parameter",
+         available_modules = availableModules,
+           hint = "Use the list_modules tool to see all available modules",
+         example = new { module_name = availableModules.FirstOrDefault() ?? "MyFirstModule" }
+                });
+
+                return (null, errorMessage);
+            }
+
+   var modules = _model.Root.GetModules();
+            var module = modules.FirstOrDefault(m => m?.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase) == true);
+
+            if (module == null)
+      {
+        var availableModules = modules
+       .Where(m => m != null && !m.FromAppStore)
+    .Select(m => m.Name)
+    .ToList();
+
+       var errorMessage = JsonSerializer.Serialize(new
+             {
+      error = $"Module '{moduleName}' not found",
+          message = "The specified module does not exist in the project",
+  available_modules = availableModules,
+             hint = "Use the list_modules tool to see all available modules"
+      });
+
+ return (null, errorMessage);
+        }
+
+            if (module.DomainModel == null)
+            {
+ var errorMessage = JsonSerializer.Serialize(new
+    {
+         error = $"Module '{moduleName}' does not have a domain model",
+       message = "The specified module exists but does not contain a domain model"
+    });
+
+        return (null, errorMessage);
+ }
+
+          return (module, null);
+        }
+
         public async Task<string> CreateEntity(JsonObject parameters)
         {
             try
             {
                 using (var transaction = _model.StartTransaction("create entity"))
                 {
+                    var moduleName = parameters["module_name"]?.ToString();
                     var entityName = parameters["entity_name"]?.ToString();
                     var attributesArray = parameters["attributes"]?.AsArray();
 
-                    // Extract persistable parameter (default to true for backward compatibility)
-                    bool persistable = true;
-                    if (parameters.ContainsKey("persistable"))
-                    {
-                        if (parameters["persistable"]?.AsValue().TryGetValue<bool>(out var persistableValue) == true)
-                        {
-                            persistable = persistableValue;
-                        }
-                    }
+                    // Get module with validation
+ var (module, error) = GetModuleByName(moduleName);
+         if (module == null)
+{
+     return error!;
+      }
 
-                    // Extract entityType parameter (default to "persistent")
-                    string entityType = "persistent";
-                    if (parameters.ContainsKey("entityType"))
-                    {
-                        entityType = parameters["entityType"]?.ToString() ?? "persistent";
-                    }
-                    // Handle backward compatibility: if persistable is false, use non-persistent
-                    else if (!persistable)
-                    {
-                        entityType = "non-persistent";
-                    }                    if (string.IsNullOrEmpty(entityName))
-                    {
-                        return JsonSerializer.Serialize(new { error = "Entity name is required" });
-                    }
+      // Extract persistable parameter (default to true for backward compatibility)
+          bool persistable = true;
+   if (parameters.ContainsKey("persistable"))
+       {
+  if (parameters["persistable"]?.AsValue().TryGetValue<bool>(out var persistableValue) == true)
+       {
+     persistable = persistableValue;
+        }
+             }
 
-                    var module = Utils.Utils.GetMyFirstModule(_model);
-                    if (module?.DomainModel == null)
-                    {
-                        return JsonSerializer.Serialize(new { error = "No domain model found" });
-                    }
+     // Extract entityType parameter (default to "persistent")
+           string entityType = "persistent";
+   if (parameters.ContainsKey("entityType"))
+    {
+             entityType = parameters["entityType"]?.ToString() ?? "persistent";
+          }
+// Handle backward compatibility: if persistable is false, use non-persistent
+    else if (!persistable)
+    {
+    entityType = "non-persistent";
+  }
 
-                    // Check if entity already exists
-                    var existingEntity = module.DomainModel.GetEntities()
-                        .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
-
-                    if (existingEntity != null)
-                    {
-                        return JsonSerializer.Serialize(new { error = $"Entity '{entityName}' already exists" });
-                    }
-
-                    IEntity mxEntity;
-                    string displayEntityType = entityType;
-
-                    if (entityType != "persistent")
-                    {
-                        // Use template-based approach for special entity types
-                        mxEntity = CreateEntityFromTemplate(module, entityName, attributesArray, entityType);
-                        if (mxEntity == null)
-                        {
-                            return JsonSerializer.Serialize(new 
-                            { 
-                                error = $"Failed to create {entityType} entity. AIExtension.{GetTemplateName(entityType)} template not found or invalid.",
-                                details = $"Make sure the AIExtension module exists with a {GetTemplateName(entityType)} entity properly configured."
-                            });
-                        }
-                    }
-                    else
-                    {
-                        // Create regular persistent entity
-                        mxEntity = CreateEntityFromTemplate(module, entityName, attributesArray, "persistent");
-                        if (mxEntity == null)
-                        {
-                            return JsonSerializer.Serialize(new 
-                            { 
-                                error = "Failed to create persistent entity.",
-                                details = "Error occurred while creating the entity."
-                            });
-                        }
-                    }
-
-                    transaction.Commit();
-
-                    return JsonSerializer.Serialize(new 
-                    { 
-                        success = true, 
-                        message = $"Entity '{entityName}' created successfully as {displayEntityType}",
-                        entity = new
-                        {
-                            name = mxEntity.Name,
-                            persistable = persistable,
-                            entityType = entityType,
-                            attributes = mxEntity.GetAttributes().Select(a => new
-                            {
-                                name = a.Name,
-                                type = a.Type?.GetType().Name ?? "Unknown"
-                            }).ToArray()
-                        }
-                    });
-                }
+          if (string.IsNullOrEmpty(entityName))
+     {
+  return JsonSerializer.Serialize(new { error = "Entity name is required" });
             }
-            catch (Exception ex)
+
+          // Check if entity already exists
+         var existingEntity = module.DomainModel.GetEntities()
+  .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+
+               if (existingEntity != null)
+   {
+      return JsonSerializer.Serialize(new { error = $"Entity '{entityName}' already exists in module '{moduleName}'" });
+         }
+
+         IEntity mxEntity;
+           string displayEntityType = entityType;
+
+ if (entityType != "persistent")
+           {
+     // Use template-based approach for special entity types
+                   mxEntity = CreateEntityFromTemplate(module, entityName, attributesArray, entityType);
+    if (mxEntity == null)
+{
+  return JsonSerializer.Serialize(new 
+    { 
+           error = $"Failed to create {entityType} entity. AIExtension.{GetTemplateName(entityType)} template not found or invalid.",
+      details = $"Make sure the AIExtension module exists with a {GetTemplateName(entityType)} entity properly configured."
+       });
+          }
+         }
+    else
             {
-                _logger.LogError(ex, "Error creating entity");
-                MendixAdditionalTools.SetLastError($"Failed to create entity: {ex.Message}", ex);
-                return JsonSerializer.Serialize(new { error = $"Failed to create entity: {ex.Message}" });
+      // Create regular persistent entity
+    mxEntity = CreateEntityFromTemplate(module, entityName, attributesArray, "persistent");
+    if (mxEntity == null)
+    {
+        return JsonSerializer.Serialize(new 
+  { 
+       error = "Failed to create persistent entity.",
+     details = "Error occurred while creating the entity."
+          });
+            }
+         }
+
+     transaction.Commit();
+
+          return JsonSerializer.Serialize(new 
+         { 
+success = true, 
+    message = $"Entity '{entityName}' created successfully in module '{moduleName}' as {displayEntityType}",
+        entity = new
+          {
+   name = mxEntity.Name,
+  module = moduleName,
+  persistable = persistable,
+    entityType = entityType,
+   attributes = mxEntity.GetAttributes().Select(a => new
+        {
+      name = a.Name,
+          type = a.Type?.GetType().Name ?? "Unknown"
+       }).ToArray()
+      }
+         });
+         }
+            }
+          catch (Exception ex)
+ {
+      _logger.LogError(ex, "Error creating entity");
+  MendixAdditionalTools.SetLastError($"Failed to create entity: {ex.Message}", ex);
+   return JsonSerializer.Serialize(new { error = $"Failed to create entity: {ex.Message}" });
             }
         }
 
