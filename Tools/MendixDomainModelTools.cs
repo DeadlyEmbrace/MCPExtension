@@ -284,102 +284,88 @@ success = true,
 
         public async Task<string> CreateAssociation(JsonObject parameters)
         {
-            try
-            {
+     try
+      {
                 using (var transaction = _model.StartTransaction("create association"))
-                {
-                    var name = parameters["name"]?.ToString();
-                    var parent = parameters["parent"]?.ToString();
-                    var child = parameters["child"]?.ToString();
-                    var type = parameters["type"]?.ToString() ?? "one-to-many";
+  {
+             var moduleName = parameters["module_name"]?.ToString();
+   var name = parameters["name"]?.ToString();
+           var parent = parameters["parent"]?.ToString();
+    var child = parameters["child"]?.ToString();
+              var type = parameters["type"]?.ToString() ?? "one-to-many";
 
-                    // Add debugging to understand what parameters are being passed
-                    _logger.LogInformation($"CreateAssociation called with: name='{name}', parent='{parent}', child='{child}', type='{type}'");
-                    _logger.LogInformation($"IMPORTANT: In typical business terms, parent='{parent}' should be the 'one' side, child='{child}' should be the 'many' side");
-                    _logger.LogInformation($"For example: Customer (parent) has many Orders (child) -> 1 Customer : N Orders");
-
-                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(child))
-                    {
-                        return JsonSerializer.Serialize(new { 
-                            error = "Missing required parameters for association creation",
-                            message = "To create an association, you must provide: name, parent, and child parameters",
-                            required_parameters = new {
-                                name = new { type = "string", description = "Name of the association (e.g., 'Customer_Orders')", required = true },
-                                parent = new { type = "string", description = "Name of the parent entity (e.g., 'Customer')", required = true },
-                                child = new { type = "string", description = "Name of the child entity (e.g., 'Order')", required = true },
-                                type = new { type = "string", description = "Type of association ('one-to-many' or 'many-to-many')", required = false, @default = "one-to-many" }
-                            },
-                            example_usage = new {
-                                tool_name = "create_association",
-                                parameters = new {
-                                    name = "Customer_Orders",
-                                    parent = "Customer", 
-                                    child = "Order",
-                                    type = "one-to-many"
-                                }
-                            },
-                            available_entities = new string[] { "Customer", "Order" },
-                            guidance = "Make sure both parent and child entities exist before creating an association. Use the entity names exactly as they appear in the domain model."
-                        });
-                    }
-
-                    var module = Utils.Utils.GetMyFirstModule(_model);
-                    if (module?.DomainModel == null)
-                    {
-                        return JsonSerializer.Serialize(new { error = "No domain model found" });
-                    }
-
-                    // Find parent and child entities
-                    var parentEntity = module.DomainModel.GetEntities()
-                        .FirstOrDefault(e => e.Name.Equals(parent, StringComparison.OrdinalIgnoreCase));
-                    var childEntity = module.DomainModel.GetEntities()
-                        .FirstOrDefault(e => e.Name.Equals(child, StringComparison.OrdinalIgnoreCase));
-
-                    if (parentEntity == null)
-                    {
-                        return JsonSerializer.Serialize(new { error = $"Parent entity '{parent}' not found" });
-                    }
-
-                    if (childEntity == null)
-                    {
-                        return JsonSerializer.Serialize(new { error = $"Child entity '{child}' not found" });
-                    }
-
-                    // Create association - FIXED: For "1 Customer has many Orders", 
-                    // we need to call childEntity.AddAssociation(parentEntity) because in Mendix:
-                    // - entity.AddAssociation(otherEntity) means "entity references otherEntity"
-                    // - For one-to-many, the "many" side should reference the "one" side
-                    // So Order (child/many) should reference Customer (parent/one)
-                    var mxAssociation = childEntity.AddAssociation(parentEntity);
-                    mxAssociation.Name = name;
-                    mxAssociation.Type = MapAssociationType(type);
-
-                    _logger.LogInformation($"FIXED: Created association {mxAssociation.Name} by calling {childEntity.Name}.AddAssociation({parentEntity.Name})");
-                    _logger.LogInformation($"This creates: 1 {parentEntity.Name} has many {childEntity.Name} (correct direction)");
-
-                    transaction.Commit();
-
-                    return JsonSerializer.Serialize(new 
-                    { 
-                        success = true, 
-                        message = $"Association '{name}' created successfully",
-                        association = new
-                        {
-                            name = mxAssociation.Name,
-                            parent = parentEntity.Name,
-                            child = childEntity.Name,
-                            type = mxAssociation.Type.ToString()
-                        }
-                    });
-                }
-            }
-            catch (Exception ex)
+         // Get module with validation
+        var (module, error) = GetModuleByName(moduleName);
+        if (module == null)
             {
+              return error!;
+      }
+
+  // Add debugging to understand what parameters are being passed
+            _logger.LogInformation($"CreateAssociation called with: module='{moduleName}', name='{name}', parent='{parent}', child='{child}', type='{type}'");
+
+             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(child))
+           {
+            return JsonSerializer.Serialize(new { 
+    error = "Missing required parameters for association creation",
+          message = "To create an association, you must provide: name, parent, and child parameters",
+          required_parameters = new {
+             module_name = new { type = "string", description = "Name of the module", required = true },
+             name = new { type = "string", description = "Name of the association (e.g., 'Customer_Orders')", required = true },
+   parent = new { type = "string", description = "Name of the parent entity (e.g., 'Customer')", required = true },
+                 child = new { type = "string", description = "Name of the child entity (e.g., 'Order')", required = true },
+      type = new { type = "string", description = "Type of association ('one-to-many' or 'many-to-many')", required = false, @default = "one-to-many" }
+   }
+            });
+     }
+
+           // Find parent and child entities
+              var parentEntity = module.DomainModel.GetEntities()
+         .FirstOrDefault(e => e.Name.Equals(parent, StringComparison.OrdinalIgnoreCase));
+         var childEntity = module.DomainModel.GetEntities()
+           .FirstOrDefault(e => e.Name.Equals(child, StringComparison.OrdinalIgnoreCase));
+
+if (parentEntity == null)
+              {
+   return JsonSerializer.Serialize(new { error = $"Parent entity '{parent}' not found in module '{moduleName}'" });
+                    }
+
+             if (childEntity == null)
+         {
+      return JsonSerializer.Serialize(new { error = $"Child entity '{child}' not found in module '{moduleName}'" });
+                    }
+
+      // Create association
+          var mxAssociation = childEntity.AddAssociation(parentEntity);
+               mxAssociation.Name = name;
+     mxAssociation.Type = MapAssociationType(type);
+
+    _logger.LogInformation($"Created association {mxAssociation.Name} in module '{moduleName}'");
+
+     transaction.Commit();
+
+    return JsonSerializer.Serialize(new 
+         { 
+          success = true, 
+  message = $"Association '{name}' created successfully in module '{moduleName}'",
+          association = new
+    {
+    name = mxAssociation.Name,
+       module = moduleName,
+         parent = parentEntity.Name,
+                 child = childEntity.Name,
+     type = mxAssociation.Type.ToString()
+       }
+      });
+         }
+}
+            catch (Exception ex)
+       {
                 _logger.LogError(ex, "Error creating association");
-                MendixAdditionalTools.SetLastError($"Failed to create association: {ex.Message}", ex);
-                return JsonSerializer.Serialize(new { error = $"Failed to create association: {ex.Message}" });
-            }
-        }
+            MendixAdditionalTools.SetLastError($"Failed to create association: {ex.Message}", ex);
+     return JsonSerializer.Serialize(new { error = $"Failed to create association: {ex.Message}" });
+      }
+    }
 
         public async Task<string> CreateMultipleEntities(JsonObject parameters)
         {
