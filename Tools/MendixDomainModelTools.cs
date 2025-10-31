@@ -29,10 +29,48 @@ namespace MCPExtension.Tools
         {
             try
             {
-                var module = Utils.Utils.GetMyFirstModule(_model);
+                // Get the module name from parameters
+                var moduleName = parameters["module_name"]?.ToString();
+        
+                if (string.IsNullOrWhiteSpace(moduleName))
+                {
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        error = "Module name is required",
+                        message = "Please provide a 'module_name' parameter to read the domain model",
+                        example = new {
+                            module_name = "MyFirstModule"
+                        }
+                    });
+                }
+
+                // Find the specified module
+                var modules = _model.Root.GetModules();
+                var module = modules.FirstOrDefault(m => m?.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase) == true);
+  
                 if (module == null)
                 {
-                    return JsonSerializer.Serialize(new { error = "Module not found" });
+                    var availableModules = modules
+                        .Where(m => m != null && !m.FromAppStore)
+                        .Select(m => m.Name)
+                        .ToList();
+            
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        error = $"Module '{moduleName}' not found",
+                        message = $"The specified module does not exist in the project",
+                        available_modules = availableModules,
+                        hint = "Use the list_modules tool to see all available modules"
+                    });
+                }
+
+                if (module.DomainModel == null)
+                {
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        error = $"Module '{moduleName}' does not have a domain model",
+                        message = "The specified module exists but does not contain a domain model"
+                    });
                 }
 
                 var domainModel = module.DomainModel;
@@ -53,7 +91,7 @@ namespace MCPExtension.Tools
                 var result = new
                 {
                     success = true,
-                    message = "Model retrieved successfully",
+                    message = $"Domain model for module '{moduleName}' retrieved successfully",
                     data = modelData,
                     status = "success"
                 };

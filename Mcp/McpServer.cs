@@ -559,8 +559,8 @@ namespace MCPExtension.MCP
         {
             return toolName switch
             {
-                "read_domain_model" => "Read the current domain model structure",
-                "create_entity" => "Create a new entity in the domain model",
+      "read_domain_model" => "Read the domain model structure for a specific module. Requires module_name parameter.",
+       "create_entity" => "Create a new entity in the domain model",
                 "create_association" => "Create a new association between entities",
                 "delete_model_element" => "Delete an element from the domain model",
                 "diagnose_associations" => "Diagnose association creation issues",
@@ -588,10 +588,15 @@ namespace MCPExtension.MCP
                 "read_domain_model" => new
                 {
                     type = "object",
-                    properties = new { },
-                    required = new string[0]
-                },
-                "create_entity" => new
+                  properties = new {
+                  module_name = new { 
+ type = "string",
+   description = "Name of the module whose domain model should be read"
+        }
+     },
+         required = new[] { "module_name" }
+        },
+     "create_entity" => new
                 {
                     type = "object",
                     properties = new
