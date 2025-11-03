@@ -568,6 +568,7 @@ namespace MCPExtension.Tools
                     "list_available_tools",
                     "debug_info",
                     "read_microflow_details",
+                    "add_create_object_activity",
                     "create_microflow",
                     "create_microflow_activity",
                     "create_microflow_activities_sequence"
@@ -627,6 +628,176 @@ catch (Exception ex)
            SetLastError("Error listing modules", ex);
          return JsonSerializer.Serialize(new { error = ex.Message });
        }
+        }
+
+        public async Task<object> AddCreateObjectActivity(JsonObject arguments)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    return JsonSerializer.Serialize(new { error = "IModel instance is null", success = false });
+                }
+
+                using (var transaction = _model.StartTransaction("Add create object activity"))
+                {
+                    var moduleName = arguments["module_name"]?.ToString();
+                    var microflowName = arguments["microflow_name"]?.ToString();
+                    var entityName = arguments["entity_name"]?.ToString();
+                    var outputVariable = arguments["output_variable"]?.ToString();
+                    var insertPosition = arguments["insert_position"]?.ToString() ?? "start";
+                    var commitType = arguments["commit"]?.ToString() ?? "No";
+                    var refreshInClient = arguments["refresh_in_client"]?.GetValue<bool>() ?? false;
+
+                    // Validate required parameters
+                    if (string.IsNullOrEmpty(microflowName))
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = "Microflow name is required",
+                            success = false 
+                        });
+                    }
+
+                    if (string.IsNullOrEmpty(entityName))
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = "Entity name is required",
+                            success = false 
+                        });
+                    }
+
+                    if (string.IsNullOrEmpty(outputVariable))
+                    {
+                        outputVariable = $"New{entityName}";
+                    }
+
+                    // Get module with validation
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
+                    {
+                        return error!;
+                    }
+
+                    // Find the microflow
+                    var microflow = _model.Root.GetModuleDocuments<IMicroflow>(module)
+                        .FirstOrDefault(mf => mf.Name.Equals(microflowName, StringComparison.OrdinalIgnoreCase));
+
+                    if (microflow == null)
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = $"Microflow '{microflowName}' not found in module '{module.Name}'",
+                            success = false 
+                        });
+                    }
+
+                    // Find the entity
+                    if (module.DomainModel == null)
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = $"Module '{module.Name}' does not have a domain model",
+                            success = false 
+                        });
+                    }
+
+                    var entity = module.DomainModel.GetEntities()
+                        .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+
+                    if (entity == null)
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = $"Entity '{entityName}' not found in module '{module.Name}'",
+                            success = false 
+                        });
+                    }
+
+                    // Get services
+                    var microflowService = _serviceProvider?.GetService<IMicroflowService>();
+                    var activitiesService = _serviceProvider?.GetService<IMicroflowActivitiesService>();
+                    
+                    if (microflowService == null || activitiesService == null)
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = "Required microflow services not available",
+                            success = false 
+                        });
+                    }
+
+                    // Map commit type
+                    var commit = MapCommitType(commitType);
+
+                    // Create the activity using the activities service
+                    var createActivity = activitiesService.CreateCreateObjectActivity(
+                        _model,
+                        entity,
+                        outputVariable,
+                        commit,
+                        refreshInClient
+                    );
+
+                    // Insert the activity
+                    bool inserted;
+                    if (insertPosition.Equals("start", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inserted = microflowService.TryInsertAfterStart(microflow, new[] { createActivity });
+                    }
+                    else
+                    {
+                        // Insert before a specific activity by position
+                        if (int.TryParse(insertPosition, out int position))
+                        {
+                            var activities = microflowService.GetAllMicroflowActivities(microflow);
+                            if (position > 0 && position <= activities.Count)
+                            {
+                                var targetActivity = activities[position - 1]; // Convert to 0-based index
+                                inserted = microflowService.TryInsertBeforeActivity(targetActivity, new[] { createActivity });
+                            }
+                            else
+                            {
+                                return JsonSerializer.Serialize(new { 
+                                    error = $"Invalid position {position}. Must be between 1 and {activities.Count}",
+                                    success = false 
+                                });
+                            }
+                        }
+                        else
+                        {
+                            return JsonSerializer.Serialize(new { 
+                                error = "Invalid insert_position. Use 'start' or a numeric position",
+                                success = false 
+                            });
+                        }
+                    }
+
+                    if (!inserted)
+                    {
+                        return JsonSerializer.Serialize(new { 
+                            error = "Failed to insert activity into microflow",
+                            success = false 
+                        });
+                    }
+
+                    transaction.Commit();
+
+                    return JsonSerializer.Serialize(new { 
+                        success = true,
+                        message = $"Create object activity added to microflow '{microflowName}' in module '{module.Name}'",
+                        microflow = microflowName,
+                        module = module.Name,
+                        entity = entityName,
+                        output_variable = outputVariable,
+                        commit_type = commitType
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding create object activity");
+                SetLastError("Error adding create object activity", ex);
+                return JsonSerializer.Serialize(new { 
+                    error = ex.Message,
+                    success = false 
+                });
+            }
         }
 
         public async Task<object> DebugInfo(JsonObject arguments)
@@ -907,6 +1078,23 @@ private IActionActivity CreateListActivity(JsonObject? config)
         private IActionActivity CreateChangeAssociationActivity(JsonObject? config)
         {
             throw new NotImplementedException("CreateChangeAssociationActivity needs to be restored from version control");
+        }
+
+        // Helper methods for microflow editing
+        private CommitEnum MapCommitType(string? commitType)
+        {
+            if (string.IsNullOrEmpty(commitType))
+            {
+                return CommitEnum.No;
+            }
+
+            return commitType.ToLowerInvariant() switch
+            {
+                "yes" => CommitEnum.Yes,
+                "yeswithoutevents" => CommitEnum.YesWithoutEvents,
+                "no" => CommitEnum.No,
+                _ => CommitEnum.No
+            };
         }
     }
 }
