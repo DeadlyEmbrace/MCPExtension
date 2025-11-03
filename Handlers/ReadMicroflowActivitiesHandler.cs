@@ -85,8 +85,8 @@ namespace MCPExtension.Handlers
                     return;
                 }
 
-                // Find the microflow within the module
-                var microflow = module.GetDocuments().OfType<IMicroflow>()
+                // Find the microflow within the module using IProject.GetModuleDocuments
+                var microflow = CurrentApp.Root.GetModuleDocuments<IMicroflow>(module)
                     .FirstOrDefault(mf => mf.Name.Equals(microflowShortName, System.StringComparison.OrdinalIgnoreCase));
 
                 if (microflow == null)

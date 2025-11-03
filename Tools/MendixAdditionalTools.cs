@@ -398,8 +398,8 @@ namespace MCPExtension.Tools
                 return error!;
             }
 
-            var microflows = module.GetDocuments()
-                .OfType<IMicroflow>()
+            // Use IProject.GetModuleDocuments instead of module.GetDocuments()
+            var microflows = _model.Root.GetModuleDocuments<IMicroflow>(module)
                 .Select(mf => new
                 {
                     name = mf.Name,
@@ -451,9 +451,8 @@ namespace MCPExtension.Tools
                 return error!;
             }
 
-            // Find the microflow
-                var microflow = module.GetDocuments()
-                    .OfType<IMicroflow>()
+            // Find the microflow using IProject.GetModuleDocuments
+                var microflow = _model.Root.GetModuleDocuments<IMicroflow>(module)
                     .FirstOrDefault(mf => mf.Name.Equals(microflowName, StringComparison.OrdinalIgnoreCase));
 
                 if (microflow == null)
@@ -613,7 +612,7 @@ namespace MCPExtension.Tools
       fromAppStore = module.FromAppStore,
        hasDomainModel = module.DomainModel != null,
      entityCount = module.DomainModel?.GetEntities()?.Count() ?? 0,
-       documentCount = module.GetDocuments()?.Count() ?? 0
+       documentCount = _model.Root.GetModuleDocuments(module)?.Count() ?? 0
        }).ToArray();
 
             return JsonSerializer.Serialize(new { 

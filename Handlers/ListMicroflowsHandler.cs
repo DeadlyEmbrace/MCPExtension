@@ -39,8 +39,8 @@ namespace MCPExtension.Handlers
                     return;
                 }
 
-                var microflows = module.GetDocuments()
-                    .OfType<IMicroflow>()
+                // Use IProject.GetModuleDocuments instead of module.GetDocuments()
+                var microflows = CurrentApp.Root.GetModuleDocuments<IMicroflow>(module)
                     .Select(mf => new
                     {
                         mf.Name,
