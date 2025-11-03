@@ -373,6 +373,7 @@ if (parentEntity == null)
             {
                 using (var transaction = _model.StartTransaction("create multiple entities"))
                 {
+                    var moduleName = parameters["module_name"]?.ToString();
                     var entitiesArray = parameters["entities"]?.AsArray();
                     
                     // Extract persistable parameter (default to true for backward compatibility)
@@ -390,10 +391,11 @@ if (parentEntity == null)
                         return JsonSerializer.Serialize(new { error = "Entities array is required" });
                     }
 
-                    var module = Utils.Utils.GetMyFirstModule(_model);
-                    if (module?.DomainModel == null)
+                    // Get module with validation
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
                     {
-                        return JsonSerializer.Serialize(new { error = "No domain model found" });
+                        return error!;
                     }
 
                     var createdEntities = new List<object>();
@@ -506,7 +508,8 @@ if (parentEntity == null)
                     return JsonSerializer.Serialize(new 
                     { 
                         success = true, 
-                        message = $"Successfully created {createdEntities.Count} {entityType} entities",
+                        message = $"Successfully created {createdEntities.Count} {entityType} entities in module '{module.Name}'",
+                        module = module.Name,
                         entities = createdEntities,
                         persistable = persistable,
                         entityType = entityType
@@ -526,6 +529,7 @@ if (parentEntity == null)
             {
                 using (var transaction = _model.StartTransaction("create multiple associations"))
                 {
+                    var moduleName = parameters["module_name"]?.ToString();
                     var associationsArray = parameters["associations"]?.AsArray();
 
                     if (associationsArray == null)
@@ -534,6 +538,7 @@ if (parentEntity == null)
                             error = "Missing required 'associations' array parameter",
                             message = "To create multiple associations, you must provide an 'associations' array containing association objects",
                             required_parameters = new {
+                                module_name = new { type = "string", description = "Name of the module", required = true },
                                 associations = new {
                                     type = "array",
                                     description = "Array of association objects to create",
@@ -549,6 +554,7 @@ if (parentEntity == null)
                             example_usage = new {
                                 tool_name = "create_multiple_associations",
                                 parameters = new {
+                                    module_name = "MyFirstModule",
                                     associations = new[] {
                                         new {
                                             name = "Customer_Orders",
@@ -564,10 +570,11 @@ if (parentEntity == null)
                         });
                     }
 
-                    var module = Utils.Utils.GetMyFirstModule(_model);
-                    if (module?.DomainModel == null)
+                    // Get module with validation
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
                     {
-                        return JsonSerializer.Serialize(new { error = "No domain model found" });
+                        return error!;
                     }
 
                     var createdAssociations = new List<object>();
@@ -617,7 +624,8 @@ if (parentEntity == null)
                     return JsonSerializer.Serialize(new 
                     { 
                         success = true, 
-                        message = $"Successfully created {createdAssociations.Count} associations",
+                        message = $"Successfully created {createdAssociations.Count} associations in module '{module.Name}'",
+                        module = module.Name,
                         associations = createdAssociations
                     });
                 }
@@ -635,6 +643,7 @@ if (parentEntity == null)
             {
                 using (var transaction = _model.StartTransaction("create domain model from schema"))
                 {
+                    var moduleName = parameters["module_name"]?.ToString();
                     var schema = parameters["schema"]?.AsObject();
 
                     if (schema == null)
@@ -652,10 +661,11 @@ if (parentEntity == null)
                         }
                     }
 
-                    var module = Utils.Utils.GetMyFirstModule(_model);
-                    if (module?.DomainModel == null)
+                    // Get module with validation
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
                     {
-                        return JsonSerializer.Serialize(new { error = "No domain model found" });
+                        return error!;
                     }
 
                     var entitiesArray = schema["entities"]?.AsArray();
@@ -775,7 +785,8 @@ if (parentEntity == null)
                     return JsonSerializer.Serialize(new 
                     { 
                         success = true, 
-                        message = $"Successfully created domain model with {createdEntities.Count} entities and {createdAssociations.Count} associations",
+                        message = $"Successfully created domain model in module '{module.Name}' with {createdEntities.Count} entities and {createdAssociations.Count} associations",
+                        module = module.Name,
                         entities = createdEntities,
                         associations = createdAssociations,
                         persistable = persistable
@@ -793,6 +804,7 @@ if (parentEntity == null)
         {
             try
             {
+                var moduleName = parameters["module_name"]?.ToString();
                 var elementType = parameters["element_type"]?.ToString();
                 var entityName = parameters["entity_name"]?.ToString();
                 var attributeName = parameters["attribute_name"]?.ToString();
@@ -803,10 +815,11 @@ if (parentEntity == null)
                     return JsonSerializer.Serialize(new { error = "Element type and entity name are required" });
                 }
 
-                var module = Utils.Utils.GetMyFirstModule(_model);
-                if (module?.DomainModel == null)
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
+                if (module == null)
                 {
-                    return JsonSerializer.Serialize(new { error = "No domain model found" });
+                    return error!;
                 }
 
                 switch (elementType.ToLower())
@@ -844,10 +857,13 @@ if (parentEntity == null)
         {
             try
             {
-                var module = Utils.Utils.GetMyFirstModule(_model);
+                var moduleName = parameters["module_name"]?.ToString();
+                
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
                 if (module == null)
                 {
-                    return JsonSerializer.Serialize(new { error = "Module not found" });
+                    return error!;
                 }
 
                 var domainModel = module.DomainModel;
@@ -873,11 +889,12 @@ if (parentEntity == null)
 
                 var result = new
                 {
+                    module = module.Name,
                     entities = entities.Select(e => e.Name).ToList(),
                     entityCount = entities.Count,
                     associations = allAssociations,
                     associationCount = allAssociations.Count,
-                    status = "Domain model diagnosed successfully",
+                    status = $"Domain model for module '{module.Name}' diagnosed successfully",
                     guidance = new
                     {
                         commonIssues = new[]

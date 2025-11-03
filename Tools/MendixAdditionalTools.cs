@@ -105,30 +105,74 @@ namespace MCPExtension.Tools
             _lastException = exception;
         }
 
+        /// <summary>
+        /// Gets a module by name with proper error handling and helpful messages
+        /// </summary>
+        private (IModule? module, string? error) GetModuleByName(string? moduleName)
+        {
+            if (string.IsNullOrWhiteSpace(moduleName))
+            {
+                var availableModules = _model.Root.GetModules()
+                    .Where(m => m != null && !m.FromAppStore)
+                    .Select(m => m.Name)
+                    .ToList();
+
+                var errorMessage = JsonSerializer.Serialize(new
+                {
+                    error = "Module name is required",
+                    message = "Please provide a 'module_name' parameter",
+                    available_modules = availableModules,
+                    hint = "Use the list_modules tool to see all available modules",
+                    example = new { module_name = availableModules.FirstOrDefault() ?? "MyFirstModule" }
+                });
+
+                return (null, errorMessage);
+            }
+
+            var modules = _model.Root.GetModules();
+            var module = modules.FirstOrDefault(m => m?.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase) == true);
+
+            if (module == null)
+            {
+                var availableModules = modules
+                    .Where(m => m != null && !m.FromAppStore)
+                    .Select(m => m.Name)
+                    .ToList();
+
+                var errorMessage = JsonSerializer.Serialize(new
+                {
+                    error = $"Module '{moduleName}' not found",
+                    message = "The specified module does not exist in the project",
+                    available_modules = availableModules,
+                    hint = "Use the list_modules tool to see all available modules"
+                });
+
+                return (null, errorMessage);
+            }
+
+            return (module, null);
+        }
+
     public async Task<object> SaveData(JsonObject arguments)
     {
         try
         {
             if (_model == null)
             {
-                var error = "IModel instance is null in SaveData.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error, success = false });
+                var errorMessage = "IModel instance is null in SaveData.";
+                _logger.LogError(errorMessage);
+                SetLastError(errorMessage);
+                return JsonSerializer.Serialize(new { error = errorMessage, success = false });
             }
 
+            var moduleName = arguments["module_name"]?.ToString();
             var dataProperty = arguments["data"]?.AsObject();
+            
             if (dataProperty == null)
             {
-                var currentModule = Utils.Utils.GetMyFirstModule(_model);
-                if (currentModule == null)
-                {
-                    var error = "No module found in SaveData.";
-                    _logger.LogError(error);
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error, success = false });
-                }
-                var moduleName = currentModule?.Name ?? "MyFirstModule";
+                // Get module with validation for error message
+                var (moduleForError, errorMsg) = GetModuleByName(moduleName);
+                var moduleNameForExample = moduleForError?.Name ?? moduleName ?? "MyFirstModule";
                     
                 var emptyDataError = "Invalid request format or empty data. The save_data tool is used to generate sample data for Mendix domain models.";
                 SetLastError(emptyDataError);
@@ -158,7 +202,7 @@ namespace MCPExtension.Tools
                             }
                         },
                         format_notes = new {
-                            entity_naming = $"Use '{moduleName}.EntityName' format for entity keys (e.g., '{moduleName}.Customer')",
+                            entity_naming = $"Use '{moduleNameForExample}.EntityName' format for entity keys (e.g., '{moduleNameForExample}.Customer')",
                             virtual_id = "Include a unique VirtualId for each record to establish relationships",
                             relationships = "Reference related entities using their VirtualId in nested objects",
                             dates = "Use ISO 8601 format for dates (YYYY-MM-DDTHH:MM:SSZ)"
@@ -168,20 +212,19 @@ namespace MCPExtension.Tools
                     });
                 }
 
-                var module = Utils.Utils.GetMyFirstModule(_model);
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
                 if (module == null)
                 {
-                    var error = "No module found in SaveData.";
-                    _logger.LogError(error);
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error, success = false });
+                    return error!;
                 }
-                if (module?.DomainModel == null)
+                
+                if (module.DomainModel == null)
                 {
-                    var error = "No domain model found.";
-                    SetLastError(error);
+                    var errorMessage = $"Module '{module.Name}' does not have a domain model.";
+                    SetLastError(errorMessage);
                     return JsonSerializer.Serialize(new { 
-                        error = error,
+                        error = errorMessage,
                         success = false
                     });
                 }
@@ -211,7 +254,8 @@ namespace MCPExtension.Tools
 
                 return JsonSerializer.Serialize(new { 
                     success = true, 
-                    message = "Data validated and saved successfully",
+                    message = $"Data validated and saved successfully for module '{module.Name}'",
+                    module = module.Name,
                     file_path = saveResult.FilePath,
                     entities_processed = validationResult.EntitiesProcessed
                 });
@@ -233,12 +277,13 @@ namespace MCPExtension.Tools
         {
             if (_model == null)
             {
-                var error = "IModel instance is null in GenerateOverviewPages.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error, success = false });
+                var errorMessage = "IModel instance is null in GenerateOverviewPages.";
+                _logger.LogError(errorMessage);
+                SetLastError(errorMessage);
+                return JsonSerializer.Serialize(new { error = errorMessage, success = false });
             }
 
+            var moduleName = arguments["module_name"]?.ToString();
             var entityNamesArray = arguments["entity_names"]?.AsArray();
                 var generateIndexSnippet = arguments["generate_index_snippet"]?.GetValue<bool>() ?? true;
 
@@ -263,18 +308,17 @@ namespace MCPExtension.Tools
                     });
                 }
 
-                var module = Utils.Utils.GetMyFirstModule(_model);
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
                 if (module == null)
                 {
-                    var error = "No module found in GenerateOverviewPages.";
-                    _logger.LogError(error);
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error, success = false });
+                    return error!;
                 }
-                if (module?.DomainModel == null)
+                
+                if (module.DomainModel == null)
                 {
                     return JsonSerializer.Serialize(new { 
-                        error = "No domain model found",
+                        error = $"Module '{module.Name}' does not have a domain model",
                         success = false
                     });
                 }
@@ -316,7 +360,8 @@ namespace MCPExtension.Tools
 
                 return JsonSerializer.Serialize(new { 
                     success = true,
-                    message = $"Successfully generated {overviewPages.Length} overview pages",
+                    message = $"Successfully generated {overviewPages.Length} overview pages for module '{module.Name}'",
+                    module = module.Name,
                     generated_pages = overviewPages.Select(p => p.Name).ToArray(),
                     entities_processed = entitiesToGenerate.Select(e => e.Name).ToArray()
                 });
@@ -338,37 +383,36 @@ namespace MCPExtension.Tools
         {
             if (_model == null)
             {
-                var error = "IModel instance is null in ListMicroflows.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error });
+                var errorMessage = "IModel instance is null in ListMicroflows.";
+                _logger.LogError(errorMessage);
+                SetLastError(errorMessage);
+                return JsonSerializer.Serialize(new { error = errorMessage });
             }
 
             var moduleName = arguments["module_name"]?.ToString();
             
-            var module = Utils.Utils.GetMyFirstModule(_model);
+            // Get module with validation
+            var (module, error) = GetModuleByName(moduleName);
             if (module == null)
             {
-                var error = "No module found in ListMicroflows.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error });
+                return error!;
             }
 
-            if (!string.IsNullOrEmpty(moduleName) && module.Name != moduleName)
-            {
-                return JsonSerializer.Serialize(new { error = $"Module '{moduleName}' not found" });
-            }
+            var microflows = module.GetDocuments()
+                .OfType<IMicroflow>()
+                .Select(mf => new
+                {
+                    name = mf.Name,
+                    module = module.Name,
+                    qualifiedName = mf.QualifiedName?.FullName
+                }).ToArray();
 
-                var microflows = module.GetDocuments()
-                    .OfType<IMicroflow>()
-                    .Select(mf => new
-                    {
-                        name = mf.Name,
-                        module = module.Name
-                    }).ToArray();
-
-                return JsonSerializer.Serialize(new { microflows = microflows });
+            return JsonSerializer.Serialize(new { 
+                success = true,
+                module = module.Name,
+                microflowCount = microflows.Length,
+                microflows = microflows 
+            });
             }
             catch (Exception ex)
             {
@@ -384,28 +428,27 @@ namespace MCPExtension.Tools
         {
             if (_model == null)
             {
-                var error = "IModel instance is null in ReadMicroflowDetails.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error });
+                var errorMessage = "IModel instance is null in ReadMicroflowDetails.";
+                _logger.LogError(errorMessage);
+                SetLastError(errorMessage);
+                return JsonSerializer.Serialize(new { error = errorMessage });
             }
 
+            var moduleName = arguments["module_name"]?.ToString();
             var microflowName = arguments["microflow_name"]?.ToString();
             
             if (string.IsNullOrEmpty(microflowName))
             {
-                var error = "Microflow name is required";
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error = error });
+                var errorMessage = "Microflow name is required";
+                SetLastError(errorMessage);
+                return JsonSerializer.Serialize(new { error = errorMessage });
             }
 
-            var module = Utils.Utils.GetMyFirstModule(_model);
+            // Get module with validation
+            var (module, error) = GetModuleByName(moduleName);
             if (module == null)
             {
-                var error = "No module found in ReadMicroflowDetails.";
-                _logger.LogError(error);
-                SetLastError(error);
-                return JsonSerializer.Serialize(new { error });
+                return error!;
             }
 
             // Find the microflow
@@ -415,9 +458,9 @@ namespace MCPExtension.Tools
 
                 if (microflow == null)
                 {
-                    var error = $"Microflow '{microflowName}' not found in module '{module.Name}'";
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error = error });
+                    var errorMessage = $"Microflow '{microflowName}' not found in module '{module.Name}'";
+                    SetLastError(errorMessage);
+                    return JsonSerializer.Serialize(new { error = errorMessage });
                 }
 
                 // Get microflow service to analyze activities
@@ -593,23 +636,24 @@ catch (Exception ex)
             {
                 if (_model == null)
                 {
-                    var error = "IModel instance is null in DebugInfo.";
-                    _logger.LogError(error);
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error });
+                    var errorMessage = "IModel instance is null in DebugInfo.";
+                    _logger.LogError(errorMessage);
+                    SetLastError(errorMessage);
+                    return JsonSerializer.Serialize(new { error = errorMessage });
                 }
 
-                var module = Utils.Utils.GetMyFirstModule(_model);
+                var moduleName = arguments["module_name"]?.ToString();
+                
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
                 if (module == null)
                 {
-                    var error = "No module found in DebugInfo.";
-                    _logger.LogError(error);
-                    SetLastError(error);
-                    return JsonSerializer.Serialize(new { error });
+                    return error!;
                 }
+                
                 var response = new Dictionary<string, object>();
 
-                if (module?.DomainModel != null)
+                if (module.DomainModel != null)
                 {
                     var entities = module.DomainModel.GetEntities().ToList();
                     response["module"] = module.Name;
@@ -739,13 +783,14 @@ catch (Exception ex)
                 }
                 else
                 {
-                    response["error"] = "No domain model found";
+                    response["error"] = $"Module '{module.Name}' does not have a domain model";
                 }
 
                 return JsonSerializer.Serialize(new
                 {
                     success = true,
-                    message = "Debug information retrieved successfully",
+                    message = $"Debug information for module '{module.Name}' retrieved successfully",
+                    module = module.Name,
                     data = response,
                     timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC")
                 });
