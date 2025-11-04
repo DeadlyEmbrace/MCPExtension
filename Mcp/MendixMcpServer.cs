@@ -161,6 +161,11 @@ namespace MCPExtension
                 var result = await additionalTools.ReadMicroflowDetails(parameters);
                 return (object)result;
             });
+            _mcpServer.RegisterTool("read_microflow_activities", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.ReadMicroflowActivities(parameters);
+                return (object)result;
+            });
             _mcpServer.RegisterTool("add_create_object_activity", async (JsonObject parameters) => 
             {
                 var result = await additionalTools.AddCreateObjectActivity(parameters);

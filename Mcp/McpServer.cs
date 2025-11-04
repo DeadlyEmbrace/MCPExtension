@@ -575,6 +575,7 @@ namespace MCPExtension.MCP
                 "list_available_tools" => "List all available tools",
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
+                "read_microflow_activities" => "Get comprehensive details about a microflow including all activities, input parameters, and return type. Shows activity properties, types, and positions.",
                 "add_create_object_activity" => "Add a create object activity to an existing microflow. Creates a new object instance of the specified entity and optionally commits it to the database.",
                 "add_change_object_activity" => "Add a change object activity to modify attributes of an existing object in a microflow. Used to set attribute values (e.g., $NewInstitution/CustomerNumber = $parameter/Value).",
                 "create_microflow" => "Create a new microflow in the module with parameters and return type",
@@ -853,6 +854,16 @@ namespace MCPExtension.MCP
                     {
                         module_name = new { type = "string" },
                         microflow_name = new { type = "string" }
+                    },
+                    required = new[] { "module_name", "microflow_name" }
+                },
+                "read_microflow_activities" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module containing the microflow" },
+                        microflow_name = new { type = "string", description = "Name of the microflow to analyze" }
                     },
                     required = new[] { "module_name", "microflow_name" }
                 },

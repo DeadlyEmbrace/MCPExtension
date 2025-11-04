@@ -520,6 +520,172 @@ namespace MCPExtension.Tools
             }
         }
 
+        public async Task<object> ReadMicroflowActivities(JsonObject arguments)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    var errorMessage = "IModel instance is null in ReadMicroflowActivities.";
+                    _logger.LogError(errorMessage);
+                    SetLastError(errorMessage);
+                    return JsonSerializer.Serialize(new { error = errorMessage });
+                }
+
+                var moduleName = arguments["module_name"]?.ToString();
+                var microflowName = arguments["microflow_name"]?.ToString();
+                
+                if (string.IsNullOrEmpty(microflowName))
+                {
+                    var errorMessage = "Microflow name is required";
+                    SetLastError(errorMessage);
+                    return JsonSerializer.Serialize(new { error = errorMessage });
+                }
+
+                // Get module with validation
+                var (module, error) = GetModuleByName(moduleName);
+                if (module == null)
+                {
+                    return error!;
+                }
+
+                // Find the microflow
+                var microflow = _model.Root.GetModuleDocuments<IMicroflow>(module)
+                    .FirstOrDefault(mf => mf.Name.Equals(microflowName, StringComparison.OrdinalIgnoreCase));
+
+                if (microflow == null)
+                {
+                    var errorMessage = $"Microflow '{microflowName}' not found in module '{module.Name}'";
+                    SetLastError(errorMessage);
+                    return JsonSerializer.Serialize(new { error = errorMessage });
+                }
+
+                // Get microflow service
+                var microflowService = _serviceProvider?.GetService<IMicroflowService>();
+                
+                if (microflowService == null)
+                {
+                    return JsonSerializer.Serialize(new { 
+                        error = "IMicroflowService not available",
+                        success = false 
+                    });
+                }
+
+                // Get all activities with detailed information
+                var activities = microflowService.GetAllMicroflowActivities(microflow);
+                var activitiesList = new List<object>();
+                
+                for (int i = 0; i < activities.Count; i++)
+                {
+                    var activity = activities[i];
+                    var activityType = activity.GetType();
+                    var activityInfo = new Dictionary<string, object>
+                    {
+                        ["position"] = i + 1, // 1-based position
+                        ["index"] = i, // 0-based index
+                        ["activityId"] = activity.GetHashCode(),
+                        ["activityType"] = activityType.Name,
+                        ["activityFullType"] = activityType.FullName ?? "Unknown"
+                    };
+
+                    // Extract caption if available
+                    var captionProperty = activityType.GetProperty("Caption");
+                    if (captionProperty != null)
+                    {
+                        var captionValue = captionProperty.GetValue(activity);
+                        if (captionValue != null)
+                        {
+                            activityInfo["caption"] = captionValue.ToString();
+                        }
+                    }
+
+                    // Extract action details if it's an IActionActivity
+                    if (activity is IActionActivity actionActivity)
+                    {
+                        activityInfo["disabled"] = actionActivity.Disabled;
+                        
+                        if (actionActivity.Action != null)
+                        {
+                            activityInfo["actionType"] = actionActivity.Action.GetType().Name;
+                            
+                            // Extract specific action properties
+                            var actionType = actionActivity.Action.GetType();
+                            var actionProps = new Dictionary<string, object>();
+                            
+                            // Try to get common properties
+                            foreach (var prop in actionType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                            {
+                                try
+                                {
+                                    if (prop.CanRead && prop.GetIndexParameters().Length == 0)
+                                    {
+                                        var value = prop.GetValue(actionActivity.Action);
+                                        if (value != null)
+                                        {
+                                            actionProps[prop.Name] = value.ToString() ?? "";
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    // Skip properties that throw exceptions
+                                }
+                            }
+                            
+                            if (actionProps.Any())
+                            {
+                                activityInfo["actionProperties"] = actionProps;
+                            }
+                        }
+                    }
+
+                    activitiesList.Add(activityInfo);
+                }
+
+                // Get input parameters
+                var inputParameters = microflowService.GetParameters(microflow)
+                    .Select(param => new
+                    {
+                        name = param.Name,
+                        dataType = param.Type?.GetType().Name ?? "Unknown",
+                        typeFullName = param.Type?.GetType().FullName ?? "Unknown"
+                    })
+                    .ToList();
+
+                // Get return type
+                var returnInfo = new
+                {
+                    returnType = microflow.ReturnType?.GetType().Name ?? "Void",
+                    returnTypeFullName = microflow.ReturnType?.GetType().FullName ?? "Void"
+                };
+
+                return JsonSerializer.Serialize(new 
+                { 
+                    success = true,
+                    microflow = new
+                    {
+                        name = microflow.Name,
+                        qualifiedName = microflow.QualifiedName?.FullName ?? "Unknown",
+                        module = module.Name,
+                        inputParameters = inputParameters,
+                        returnInfo = returnInfo,
+                        activityCount = activities.Count,
+                        activities = activitiesList
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading microflow activities");
+                SetLastError("Error reading microflow activities", ex);
+                return JsonSerializer.Serialize(new { 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace,
+                    success = false 
+                });
+            }
+        }
+
         public async Task<object> GetLastError(JsonObject arguments)
         {
             try
@@ -569,6 +735,7 @@ namespace MCPExtension.Tools
                     "list_available_tools",
                     "debug_info",
                     "read_microflow_details",
+                    "read_microflow_activities",
                     "add_create_object_activity",
                     "add_change_object_activity",
                     "create_microflow",
