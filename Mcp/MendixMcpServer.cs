@@ -166,6 +166,11 @@ namespace MCPExtension
                 var result = await additionalTools.AddCreateObjectActivity(parameters);
                 return (object)result;
             });
+            _mcpServer.RegisterTool("add_change_object_activity", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.AddChangeObjectActivity(parameters);
+                return (object)result;
+            });
 
             // TODO: Re-enable create_microflow when CreateMicroflowWithService method is fully restored
             // _mcpServer.RegisterTool("create_microflow", async (JsonObject parameters) => 

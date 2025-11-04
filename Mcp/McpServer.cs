@@ -576,6 +576,7 @@ namespace MCPExtension.MCP
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
                 "add_create_object_activity" => "Add a create object activity to an existing microflow. Creates a new object instance of the specified entity and optionally commits it to the database.",
+                "add_change_object_activity" => "Add a change object activity to modify attributes of an existing object in a microflow. Used to set attribute values (e.g., $NewInstitution/CustomerNumber = $parameter/Value).",
                 "create_microflow" => "Create a new microflow in the module with parameters and return type",
                 "create_microflow_activities" => "Create one or more microflow activities in sequence within an existing microflow. Activities are inserted in the correct order automatically. For single activities, use an array with one item. This unified approach replaces individual activity creation for better reliability.",
                 _ => "Tool description not available"
@@ -869,6 +870,32 @@ namespace MCPExtension.MCP
                         refresh_in_client = new { type = "boolean", description = "Optional: Refresh object in client after commit. Default: false" }
                     },
                     required = new[] { "module_name", "microflow_name", "entity_name" }
+                },
+                "add_change_object_activity" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module containing the microflow" },
+                        microflow_name = new { type = "string", description = "Name of the microflow to edit" },
+                        object_variable = new { type = "string", description = "Name of the object variable to modify (e.g., '$NewInstitution')" },
+                        changes = new { 
+                            type = "array", 
+                            description = "Array of attribute changes to apply",
+                            items = new {
+                                type = "object",
+                                properties = new {
+                                    attribute = new { type = "string", description = "Name of the attribute to change (e.g., 'CustomerNumber')" },
+                                    value = new { type = "string", description = "Expression for the new value (e.g., '$parameter/SingleSelectionNumber' or '\"literal value\"')" }
+                                },
+                                required = new[] { "attribute", "value" }
+                            }
+                        },
+                        insert_position = new { type = "string", description = "Optional: Where to insert ('start', 'end', or numeric position 1-based). Default: 'start'" },
+                        commit = new { type = "string", description = "Optional: Commit option ('yes', 'no', 'yeswithoutevents'). Default: 'no'" },
+                        refresh_in_client = new { type = "boolean", description = "Optional: Refresh object in client after commit. Default: false" }
+                    },
+                    required = new[] { "module_name", "microflow_name", "object_variable", "changes" }
                 },
                 "create_microflow" => new
                 {
