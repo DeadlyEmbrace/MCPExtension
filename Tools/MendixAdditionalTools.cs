@@ -903,39 +903,12 @@ catch (Exception ex)
                         refreshInClient
                     );
 
-                    // Insert the activity
-                    bool inserted;
-                    if (insertPosition.Equals("start", StringComparison.OrdinalIgnoreCase))
-                    {
-                        inserted = microflowService.TryInsertAfterStart(microflow, new[] { createActivity });
-                    }
-                    else
-                    {
-                        // Insert before a specific activity by position
-                        if (int.TryParse(insertPosition, out int position))
-                        {
-                            var activities = microflowService.GetAllMicroflowActivities(microflow);
-                            if (position > 0 && position <= activities.Count)
-                            {
-                                var targetActivity = activities[position - 1]; // Convert to 0-based index
-                                inserted = microflowService.TryInsertBeforeActivity(targetActivity, new[] { createActivity });
-                            }
-                            else
-                            {
-                                return JsonSerializer.Serialize(new { 
-                                    error = $"Invalid position {position}. Must be between 1 and {activities.Count}",
-                                    success = false 
-                                });
-                            }
-                        }
-                        else
-                        {
-                            return JsonSerializer.Serialize(new { 
-                                error = "Invalid insert_position. Use 'start' or a numeric position",
-                                success = false 
-                            });
-                        }
-                    }
+                    // Insert the activity after start
+                    // NOTE: GetAllMicroflowActivities returns activities in undefined order per API docs:
+                    // "Order and nesting of activities cannot be determined from the result"
+                    // Therefore, we always insert after start to maintain sequential flow.
+                    // Activities inserted this way will appear in the order they were added.
+                    bool inserted = microflowService.TryInsertAfterStart(microflow, new[] { createActivity });
 
                     if (!inserted)
                     {
@@ -1138,59 +1111,12 @@ catch (Exception ex)
                         commit
                     );
 
-                    // Insert the activity
-                    bool inserted;
-                    if (insertPosition.Equals("start", StringComparison.OrdinalIgnoreCase))
-                    {
-                        inserted = microflowService.TryInsertAfterStart(microflow, changeActivity);
-                    }
-                    else if (insertPosition.Equals("end", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Insert at the end (before end event)
-                        var activities = microflowService.GetAllMicroflowActivities(microflow);
-                        if (activities.Any())
-                        {
-                            var lastActivity = activities.Last();
-                            // Insert after the last activity
-                            inserted = microflowService.TryInsertBeforeActivity(lastActivity, changeActivity);
-                            if (!inserted)
-                            {
-                                // Try inserting after start if that failed
-                                inserted = microflowService.TryInsertAfterStart(microflow, changeActivity);
-                            }
-                        }
-                        else
-                        {
-                            inserted = microflowService.TryInsertAfterStart(microflow, changeActivity);
-                        }
-                    }
-                    else
-                    {
-                        // Insert at a specific position
-                        if (int.TryParse(insertPosition, out int position))
-                        {
-                            var activities = microflowService.GetAllMicroflowActivities(microflow);
-                            if (position > 0 && position <= activities.Count)
-                            {
-                                var targetActivity = activities[position - 1]; // Convert to 0-based index
-                                inserted = microflowService.TryInsertBeforeActivity(targetActivity, changeActivity);
-                            }
-                            else
-                            {
-                                return JsonSerializer.Serialize(new { 
-                                    error = $"Invalid position {position}. Must be between 1 and {activities.Count}",
-                                    success = false 
-                                });
-                            }
-                        }
-                        else
-                        {
-                            return JsonSerializer.Serialize(new { 
-                                error = "Invalid insert_position. Use 'start', 'end', or a numeric position",
-                                success = false 
-                            });
-                        }
-                    }
+                    // Insert activity after start
+                    // NOTE: GetAllMicroflowActivities returns activities in undefined order per API docs:
+                    // "Order and nesting of activities cannot be determined from the result"
+                    // Therefore, we always insert after start to maintain sequential flow.
+                    // Activities inserted this way will appear in the order they were added.
+                    bool inserted = microflowService.TryInsertAfterStart(microflow, changeActivity);
 
                     if (!inserted)
                     {

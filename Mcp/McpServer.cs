@@ -576,8 +576,8 @@ namespace MCPExtension.MCP
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
                 "read_microflow_activities" => "Get comprehensive details about a microflow including all activities, input parameters, and return type. Shows activity properties, types, and positions.",
-                "add_create_object_activity" => "Add a create object activity to an existing microflow. Creates a new object instance of the specified entity and optionally commits it to the database.",
-                "add_change_object_activity" => "Add a change object activity to modify attributes of an existing object in a microflow. Used to set attribute values (e.g., $NewInstitution/CustomerNumber = $parameter/Value).",
+                "add_create_object_activity" => "Add a create object activity to an existing microflow. Creates a new object instance of the specified entity and optionally commits it to the database. Activities are inserted in the order they are added (after the start event).",
+                "add_change_object_activity" => "Add a change object activity to modify attributes of an existing object variable in a microflow. Use this to set attribute values using expressions. Activities are inserted in the order they are added (after the start event).",
                 "create_microflow" => "Create a new microflow in the module with parameters and return type",
                 "create_microflow_activities" => "Create one or more microflow activities in sequence within an existing microflow. Activities are inserted in the correct order automatically. For single activities, use an array with one item. This unified approach replaces individual activity creation for better reliability.",
                 _ => "Tool description not available"
@@ -876,11 +876,11 @@ namespace MCPExtension.MCP
                         microflow_name = new { type = "string", description = "Name of the microflow to edit" },
                         entity_name = new { type = "string", description = "Name of the entity to create (e.g., 'Customer')" },
                         output_variable = new { type = "string", description = "Optional: Name for the variable holding the created object. Defaults to 'New{EntityName}'" },
-                        insert_position = new { type = "string", description = "Optional: Where to insert ('start' or numeric position 1-based). Default: 'start'" },
                         commit = new { type = "string", description = "Optional: Commit option ('yes', 'no', 'yeswithoutevents'). Default: 'no'" },
                         refresh_in_client = new { type = "boolean", description = "Optional: Refresh object in client after commit. Default: false" }
                     },
-                    required = new[] { "module_name", "microflow_name", "entity_name" }
+                    required = new[] { "module_name", "microflow_name", "entity_name" },
+                    description = "NOTE: Activities are inserted after the start event in the order they are added. Call this tool multiple times in the desired sequence to build your microflow."
                 },
                 "add_change_object_activity" => new
                 {
@@ -902,11 +902,11 @@ namespace MCPExtension.MCP
                                 required = new[] { "attribute", "value" }
                             }
                         },
-                        insert_position = new { type = "string", description = "Optional: Where to insert ('start', 'end', or numeric position 1-based). Default: 'start'" },
                         commit = new { type = "string", description = "Optional: Commit option ('yes', 'no', 'yeswithoutevents'). Default: 'no'" },
                         refresh_in_client = new { type = "boolean", description = "Optional: Refresh object in client after commit. Default: false" }
                     },
-                    required = new[] { "module_name", "microflow_name", "object_variable", "changes" }
+                    required = new[] { "module_name", "microflow_name", "object_variable", "changes" },
+                    description = "NOTE: Activities are inserted after the start event in the order they are added. Call this tool multiple times in the desired sequence to build your microflow."
                 },
                 "create_microflow" => new
                 {
