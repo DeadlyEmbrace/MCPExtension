@@ -1068,11 +1068,28 @@ if (parentEntity == null)
                         // Handle Enumerations specially
                         if (attr.Type is IEnumerationAttributeType enumType)
                         {
-                            var enumeration = enumType.Enumeration.Resolve();
-                            var enumValues = enumeration.GetValues()
-                                .Select(v => v.Name)
-                                .ToList();
-                            return $"Enumeration ({string.Join("/", enumValues)})";
+                            try
+                            {
+                                var enumeration = enumType.Enumeration?.Resolve();
+                                if (enumeration != null)
+                                {
+                                    var enumValues = enumeration.GetValues()
+                                        ?.Select(v => v?.Name)
+                                        .Where(name => !string.IsNullOrEmpty(name))
+                                        .ToList();
+                                    
+                                    if (enumValues != null && enumValues.Any())
+                                    {
+                                        return $"Enumeration ({string.Join("/", enumValues)})";
+                                    }
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                // If enumeration resolution fails, just return the type name
+                            }
+                            
+                            return "Enumeration";
                         }
                         
                         return typeName;
@@ -1083,46 +1100,59 @@ if (parentEntity == null)
         private List<Association> GetEntityAssociations(IEntity entity, IModule module)
         {
             var entityAssociations = new List<Association>();
-            var associations = entity.GetAssociations(AssociationDirection.Both, null);
-
-            foreach (var association in associations)
+            
+            try
             {
-                var associationType = association.Association.Type.ToString();
-                var mappedType = associationType switch
-                {
-                    "Reference" => "one-to-many",
-                    "ReferenceSet" => "many-to-many",
-                    _ => "one-to-many"
-                };
+                var associations = entity.GetAssociations(AssociationDirection.Both, null);
 
-                // FIXED: For Reference associations, we need to swap parent/child to match business semantics
-                // In Mendix: association.Parent is the entity that owns the reference (the "many" side)
-                //           association.Child is the entity being referenced (the "one" side)
-                // In business terms: we want "one" side as parent, "many" side as child
-                string parentName, childName;
-                
-                if (associationType == "Reference")
+                foreach (var association in associations)
                 {
-                    // Swap: Mendix parent becomes our child, Mendix child becomes our parent
-                    parentName = association.Child.Name;  // The "one" side (being referenced)
-                    childName = association.Parent.Name;  // The "many" side (owns the reference)
+                    if (association?.Association == null || association.Parent == null || association.Child == null)
+                    {
+                        continue; // Skip invalid associations
+                    }
+
+                    var associationType = association.Association.Type.ToString();
+                    var mappedType = associationType switch
+                    {
+                        "Reference" => "one-to-many",
+                        "ReferenceSet" => "many-to-many",
+                        _ => "one-to-many"
+                    };
+
+                    // FIXED: For Reference associations, we need to swap parent/child to match business semantics
+                    // In Mendix: association.Parent is the entity that owns the reference (the "many" side)
+                    //           association.Child is the entity being referenced (the "one" side)
+                    // In business terms: we want "one" side as parent, "many" side as child
+                    string parentName, childName;
+                    
+                    if (associationType == "Reference")
+                    {
+                        // Swap: Mendix parent becomes our child, Mendix child becomes our parent
+                        parentName = association.Child.Name;  // The "one" side (being referenced)
+                        childName = association.Parent.Name;  // The "many" side (owns the reference)
+                    }
+                    else
+                    {
+                        // For many-to-many, keep original direction
+                        parentName = association.Parent.Name;
+                        childName = association.Child.Name;
+                    }
+
+                    var associationModel = new Association
+                    {
+                        Name = association.Association.Name,
+                        Parent = parentName,
+                        Child = childName,
+                        Type = mappedType
+                    };
+
+                    entityAssociations.Add(associationModel);
                 }
-                else
-                {
-                    // For many-to-many, keep original direction
-                    parentName = association.Parent.Name;
-                    childName = association.Child.Name;
-                }
-
-                var associationModel = new Association
-                {
-                    Name = association.Association.Name,
-                    Parent = parentName,
-                    Child = childName,
-                    Type = mappedType
-                };
-
-                entityAssociations.Add(associationModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error reading associations for entity {EntityName}", entity?.Name ?? "Unknown");
             }
 
             return entityAssociations;
