@@ -578,7 +578,9 @@ namespace MCPExtension.MCP
                 "get_last_error" => "Get details about the last error",
                 "get_project_errors" => "Get project errors and consistency check information (Note: API limitation - provides workarounds and common errors)",
                 "list_available_tools" => "List all available tools",
-                "add_pages_to_navigation" => "Add pages to the responsive web navigation profile. Use this to make pages accessible through the app's main navigation menu.",
+                "add_pages_to_navigation" => "Add pages to the responsive web navigation profile. Use this to make pages accessible through the app's main navigation menu. Check for duplicates before adding.",
+                "list_navigation_items" => "List all navigation items across all navigation profiles. Shows navigation document structure and types available in the Extensions API.",
+                "remove_pages_from_navigation" => "Remove pages from navigation profiles. NOTE: API LIMITATION - Direct removal not supported, manual workaround provided.",
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
                 "read_microflow_activities" => "Get comprehensive details about a microflow including all activities, input parameters, and return type. Shows activity properties, types, and positions.",
@@ -1058,12 +1060,39 @@ namespace MCPExtension.MCP
                         page_names = new
                         {
                             type = "array",
-                            description = "Array of page names to add to the navigation menu",
+                            description = "Array of page names to add to the navigation menu. Duplicates will be checked before adding.",
                             items = new { type = "string" }
                         }
                     },
                     required = new[] { "module_name", "page_names" },
                     description = "Adds specified pages to the responsive web navigation profile, making them accessible through the app's main navigation menu."
+                },
+                "list_navigation_items" => new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[0],
+                    description = "Lists all navigation items and explores the navigation structure available through the Extensions API."
+                },
+                "remove_pages_from_navigation" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new
+                        {
+                            type = "string",
+                            description = "Name of the module containing navigation items (optional - for documentation purposes)"
+                        },
+                        page_names = new
+                        {
+                            type = "array",
+                            description = "Array of page names to remove from navigation (optional - for documentation purposes)",
+                            items = new { type = "string" }
+                        }
+                    },
+                    required = new string[0],
+                    description = "API LIMITATION: Navigation item removal not directly supported. Returns workaround instructions for manual removal."
                 },
                 "debug_info" => new
                 {

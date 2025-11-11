@@ -181,6 +181,16 @@ namespace MCPExtension
                 var result = await additionalTools.AddPagesToNavigation(parameters);
                 return (object)result;
             });
+            _mcpServer.RegisterTool("list_navigation_items", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.ListNavigationItems(parameters);
+                return (object)result;
+            });
+            _mcpServer.RegisterTool("remove_pages_from_navigation", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.RemovePagesFromNavigation(parameters);
+                return (object)result;
+            });
             _mcpServer.RegisterTool("debug_info", async (JsonObject parameters) => 
             {
                 var result = await additionalTools.DebugInfo(parameters);

@@ -811,7 +811,9 @@ namespace MCPExtension.Tools
                     "create_microflow",
                     "create_microflow_activity",
                     "create_microflow_activities_sequence",
-                    "add_pages_to_navigation"
+                    "add_pages_to_navigation",
+                    "list_navigation_items",
+                    "remove_pages_from_navigation"
                 };
 
                 return JsonSerializer.Serialize(new { available_tools = tools });
@@ -820,6 +822,89 @@ namespace MCPExtension.Tools
             {
                 _logger.LogError(ex, "Error listing available tools");
                 return JsonSerializer.Serialize(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lists all navigation items across all navigation profiles
+        /// </summary>
+        public async Task<string> ListNavigationItems(JsonObject parameters)
+        {
+            try
+            {
+                // Explore what navigation-related documents exist
+                var allModules = _model.Root.GetModules().ToList();
+                var explorationResults = new List<object>();
+
+                foreach (var module in allModules)
+                {
+                    var documents = _model.Root.GetModuleDocuments(module).ToList();
+                    var navDocs = documents
+                        .Where(doc => doc.document.GetType().Name.Contains("Navigation", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (navDocs.Any())
+                    {
+                        explorationResults.Add(new
+                        {
+                            module_name = module.Name,
+                            navigation_documents = navDocs.Select(d => new
+                            {
+                                type = d.documentType.Name,
+                                full_type = d.documentType.FullName,
+                                document_name = d.document.Name
+                            }).ToArray()
+                        });
+                    }
+                }
+
+                var result = new
+                {
+                    success = true,
+                    message = "Navigation API exploration",
+                    module_count = allModules.Count,
+                    modules_with_navigation = explorationResults.ToArray(),
+                    note = "Exploring navigation document types available in Extensions API"
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    stack_trace = ex.StackTrace,
+                    success = false
+                });
+            }
+        }
+
+        /// <summary>
+        /// Removes specified pages from navigation profiles
+        /// </summary>
+        public async Task<string> RemovePagesFromNavigation(JsonObject parameters)
+        {
+            try
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "❌ API LIMITATION: Navigation item removal not yet implemented",
+                    message = "The Extensions API does not provide direct access to navigation profiles for item removal",
+                    reason = "PopulateWebNavigationWith is the only available method - it only adds items",
+                    status = "Under investigation",
+                    workaround = "Manual removal required in Mendix Studio Pro: Navigation pane → Delete items"
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    stack_trace = ex.StackTrace,
+                    success = false
+                });
             }
         }
 
@@ -934,6 +1019,8 @@ namespace MCPExtension.Tools
                     .ToList();
 
                 // Add pages to navigation using the service
+                // NOTE: The Extensions API doesn't provide a way to check for duplicates before adding
+                // PopulateWebNavigationWith will add items even if they already exist in navigation
                 _navigationManagerService.PopulateWebNavigationWith(
                     _model,
                     pagesToAdd
@@ -945,7 +1032,9 @@ namespace MCPExtension.Tools
                     message = $"Successfully added {pagesToAdd.Length} page(s) to navigation",
                     module = module.Name,
                     added_pages = pagesToAdd.Select(p => p.Name).ToArray(),
-                    not_found = notFoundPages.Any() ? notFoundPages.ToArray() : null
+                    not_found = notFoundPages.Any() ? notFoundPages.ToArray() : null,
+                    note = "⚠️ API does not support duplicate checking - pages may appear multiple times in navigation if added repeatedly. Use list_navigation_items to explore what exists.",
+                    workaround = "To prevent duplicates, manually check navigation in Studio Pro before adding pages"
                 };
 
                 return JsonSerializer.Serialize(result);
