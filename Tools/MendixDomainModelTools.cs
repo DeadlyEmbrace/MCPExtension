@@ -1537,6 +1537,7 @@ if (parentEntity == null)
                 var attributeName = parameters["attribute_name"]?.ToString();
                 var associationName = parameters["association_name"]?.ToString();
                 var enumerationName = parameters["enumeration_name"]?.ToString();
+                var documentName = parameters["document_name"]?.ToString();
 
                 // Get module with validation
                 var (module, error) = GetModuleByName(moduleName);
@@ -1588,11 +1589,37 @@ if (parentEntity == null)
                         }
                         return DeleteEnumeration(module, enumerationName);
                     
+                    case "page":
+                    case "microflow":
+                    case "folder":
+                    case "document":
+                        // API LIMITATION: The Mendix Extensions API does not expose methods to delete documents
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            error = $"❌ API LIMITATION: Cannot delete {elementType} programmatically",
+                            message = "The Mendix Studio Pro Extensions API v8.0 does not expose methods to delete documents (pages, microflows, folders, etc.)",
+                            reason = "Document deletion APIs are not available in the Extensions API",
+                            workaround = "Documents must be deleted manually in Mendix Studio Pro",
+                            manual_steps = new[]
+                            {
+                                $"1. Open the project in Mendix Studio Pro",
+                                $"2. Navigate to the module '{moduleName}'",
+                                $"3. Right-click the {elementType} '{documentName ?? "item"}'",
+                                $"4. Select 'Delete' from the context menu",
+                                $"5. Confirm the deletion"
+                            },
+                            supported_types = new[] { "entity", "attribute", "association", "enumeration" },
+                            api_documentation = "https://docs.mendix.com/apidocs-mxsdk/apidocs/extensibility-api/",
+                            note = "This is a known limitation of the Extensions API. Domain model elements (entities, attributes, associations, enumerations) CAN be deleted programmatically using IDomainModel.RemoveEntity() and similar methods, but document deletion methods do not exist in the API."
+                        });
+                    
                     default:
                         return JsonSerializer.Serialize(new 
                         { 
                             error = $"Unknown deletion type: {elementType}",
-                            supportedTypes = new[] { "entity", "attribute", "association", "enumeration" }
+                            supported_types = new[] { "entity", "attribute", "association", "enumeration" },
+                            not_supported = new[] { "page", "microflow", "folder", "document" },
+                            note = "Pages, microflows, folders, and other documents cannot be deleted through the Extensions API - this is an API limitation"
                         });
                 }
             }

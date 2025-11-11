@@ -565,7 +565,7 @@ namespace MCPExtension.MCP
                 "update_entity_layout" => "Update the visual layout/positioning of entities in the domain model (grid, horizontal, vertical, circular, or custom positions)",
                 "manage_annotations" => "Add, update, remove, or read documentation annotations for entities and associations. NOTE: Domain model-level annotations are not accessible through the API.",
                 "create_association" => "Create a new association between entities",
-                "delete_model_element" => "Delete an element from the domain model (entity, attribute, association, or enumeration)",
+                "delete_model_element" => "Delete domain model elements (entity, attribute, association, enumeration). NOTE: Cannot delete documents (pages, microflows, folders) - API limitation",
                 "diagnose_associations" => "Diagnose association creation issues",
                 "create_multiple_entities" => "Create multiple entities at once",
                 "create_multiple_associations" => "Create multiple associations at once",
@@ -900,14 +900,21 @@ namespace MCPExtension.MCP
                 "delete_model_element" => new
                 {
                     type = "object",
+                    description = "Delete elements from the domain model. NOTE: API LIMITATION - Can only delete domain model elements (entity, attribute, association, enumeration). Cannot delete documents (pages, microflows, folders) - this is a known Mendix Extensions API v8.0 limitation. Documents must be deleted manually in Studio Pro.",
                     properties = new
                     {
                         module_name = new { type = "string", description = "Name of the module containing the element" },
-                        element_type = new { type = "string", description = "Type of element to delete: 'entity', 'attribute', 'association', or 'enumeration'" },
+                        element_type = new 
+                        { 
+                            type = "string", 
+                            description = "Type of element to delete. SUPPORTED: 'entity', 'attribute', 'association', 'enumeration'. NOT SUPPORTED (API limitation): 'page', 'microflow', 'folder', 'document'",
+                            @enum = new[] { "entity", "attribute", "association", "enumeration", "page", "microflow", "folder", "document" }
+                        },
                         entity_name = new { type = "string", description = "Name of the entity (required for entity, attribute, and association deletion)" },
                         attribute_name = new { type = "string", description = "Name of the attribute (required for attribute deletion)" },
                         association_name = new { type = "string", description = "Name of the association (required for association deletion)" },
-                        enumeration_name = new { type = "string", description = "Name of the enumeration (required for enumeration deletion)" }
+                        enumeration_name = new { type = "string", description = "Name of the enumeration (required for enumeration deletion)" },
+                        document_name = new { type = "string", description = "Name of the document (for API limitation error messages only - deletion not supported)" }
                     },
                     required = new[] { "module_name", "element_type" }
                 },
