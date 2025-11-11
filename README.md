@@ -392,7 +392,29 @@ The extension correctly maps association types as follows:
   - `diagnose_associations` - Module_name is optional
 - **Commit**: b4bb00c
 
-#### 5. Parameter Validation Timing
+#### 5. ✅ ENHANCED - delete_model_element Enumeration Support (November 2025)
+- **Status**: ✅ Enhanced
+- **Issue**: `delete_model_element` only supported deleting entities, attributes, and associations, but not enumerations
+- **Gap**: Enumerations could be created but not deleted, requiring manual cleanup in Mendix Studio Pro
+- **Enhancement**: Added enumeration deletion support
+  - New `element_type`: "enumeration"
+  - New parameter: `enumeration_name`
+  - Safety check: Validates enumeration is not in use before deletion
+  - Helpful errors: Shows which entity attributes are using the enumeration if deletion fails
+  - Lists available enumerations if specified name not found
+- **Usage**: 
+  ```json
+  {
+    "module_name": "MyFirstModule",
+    "element_type": "enumeration",
+    "enumeration_name": "PriorityEnum"
+  }
+  ```
+- **Commit**: 6daa6d9
+
+### Parameter Handling Issues
+
+#### 6. Parameter Validation Timing
 - **Status**: 🟡 High Priority
 - **Issue**: Tools fail mid-execution rather than validating parameters upfront
 - **Impact**: Wasted operations, unclear error messages, potential partial state changes
@@ -400,7 +422,7 @@ The extension correctly maps association types as follows:
 
 ### Missing Functionality
 
-#### 6. Entity Update Capability
+#### 7. Entity Update Capability
 - **Status**: 🟠 Medium Priority
 - **Issue**: Can create or delete entities, but cannot add attributes to existing entities
 - **Current Workaround**: Delete and recreate entire entity
@@ -410,7 +432,7 @@ The extension correctly maps association types as follows:
   - `update_attribute` - Modify existing attribute properties
   - `remove_attribute` - Delete specific attributes without removing entity
 
-#### 7. Lightweight Discovery Tools
+#### 8. Lightweight Discovery Tools
 - **Status**: 🟠 Medium Priority
 - **Issue**: Full domain model reads are heavy; need quick discovery options
 - **Required Tools**:
@@ -419,7 +441,7 @@ The extension correctly maps association types as follows:
   - `entity_exists` - Quick existence check without loading full entity
   - `get_entity_summary` - Lightweight entity info (name, attributes, type only)
 
-#### 8. Microflow Tool Exposure
+#### 9. Microflow Tool Exposure
 - **Status**: 🟠 Medium Priority
 - **Issue**: Microflow tools appear in `list_available_tools` but aren't exposed through MCP interface
 - **Impact**: Advertised functionality is unusable
@@ -432,7 +454,7 @@ The extension correctly maps association types as follows:
 
 ### Enhanced Capabilities
 
-#### 9. Batch Operation Error Handling
+#### 10. Batch Operation Error Handling
 - **Status**: 🟢 Low Priority
 - **Issue**: `create_multiple_entities` doesn't report which entities succeeded/failed in partial failures
 - **Impact**: Unclear state after batch operations, difficult rollback
@@ -452,13 +474,13 @@ The extension correctly maps association types as follows:
   }
   ```
 
-#### 10. Validation-Only Modes
+#### 11. Validation-Only Modes
 - **Status**: 🟢 Low Priority
 - **Issue**: No way to test entity/association creation without committing changes
 - **Required Enhancement**: Add `dry_run` or `validate_only` parameter to creation tools
 - **Benefits**: Safe testing, parameter validation without side effects
 
-#### 11. Project Context Tool
+#### 12. Project Context Tool
 - **Status**: 🟢 Low Priority
 - **Issue**: No tool to get current project information for orientation
 - **Required Tool**: `get_project_info`
@@ -474,7 +496,7 @@ The extension correctly maps association types as follows:
 
 ### Documentation Issues
 
-#### 12. Parameter Documentation Clarity
+#### 13. Parameter Documentation Clarity
 - **Status**: 🟡 High Priority
 - **Issue**: Unclear which parameters are truly required vs optional (especially `module_name`)
 - **Fix Required**:
@@ -483,7 +505,7 @@ The extension correctly maps association types as follows:
   - Add parameter examples to each tool description
   - Specify module_name requirements explicitly in every tool
 
-#### 13. Error Message Quality
+#### 14. Error Message Quality
 - **Status**: 🟡 High Priority
 - **Issue**: Generic error messages don't guide users to solutions
 - **Required Enhancement**:
