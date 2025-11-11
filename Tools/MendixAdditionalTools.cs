@@ -895,9 +895,8 @@ namespace MCPExtension.Tools
                     });
                 }
 
-                // Find the pages in the module
-                var allPages = module.GetDocuments()
-                    .OfType<IPage>()
+                // Find the pages in the module (search recursively through all folders)
+                var allPages = _model.Root.GetModuleDocuments<IPage>(module)
                     .ToList();
 
                 if (!allPages.Any())
