@@ -151,6 +151,11 @@ namespace MCPExtension
       var result = await additionalTools.GetLastError(parameters);
       return (object)result;
  });
+            _mcpServer.RegisterTool("get_project_errors", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.GetProjectErrors(parameters);
+                return (object)result;
+            });
             _mcpServer.RegisterTool("list_available_tools", async (JsonObject parameters) => 
             {
                 var result = await additionalTools.ListAvailableTools(parameters);
@@ -240,7 +245,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 18, // Updated number of registered tools (added list_modules, list_enumerations)
+                registeredTools = 19, // Updated number of registered tools (added list_modules, list_enumerations, get_project_errors)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",

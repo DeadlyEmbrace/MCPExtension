@@ -573,6 +573,7 @@ namespace MCPExtension.MCP
                 "list_modules" => "List all modules in the Mendix project with basic information",
                 "list_enumerations" => "List all enumerations in a specific module with their values",
                 "get_last_error" => "Get details about the last error",
+                "get_project_errors" => "Get project errors and consistency check information (Note: API limitation - provides workarounds and common errors)",
                 "list_available_tools" => "List all available tools",
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
@@ -851,6 +852,12 @@ namespace MCPExtension.MCP
                     required = new[] { "module_name" }
                 },
                 "get_last_error" => new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = new string[0]
+                },
+                "get_project_errors" => new
                 {
                     type = "object",
                     properties = new { },

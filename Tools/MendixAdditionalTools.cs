@@ -714,6 +714,69 @@ namespace MCPExtension.Tools
             }
         }
 
+        public async Task<object> GetProjectErrors(JsonObject arguments)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    return JsonSerializer.Serialize(new { 
+                        error = "IModel instance is null",
+                        success = false 
+                    });
+                }
+
+                // Note: The Mendix Extensions API doesn't provide direct access to project errors/consistency checks.
+                // This is a limitation that would require workarounds like:
+                // 1. Parsing error output from build logs
+                // 2. Implementing custom validation rules
+                // 3. Using specific diagnostic tools like diagnose_associations
+
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Direct error retrieval not supported by Mendix Extensions API",
+                    message = "The Mendix Studio Pro Extensions API does not expose a method to programmatically retrieve project errors or consistency checks.",
+                    workarounds = new
+                    {
+                        option1 = new
+                        {
+                            description = "Use diagnostic tools to check for specific issues",
+                            tools = new[]
+                            {
+                                "diagnose_associations - Check association configuration issues",
+                                "list_enumerations - Verify enumeration definitions",
+                                "read_domain_model - Validate entity and attribute structures"
+                            }
+                        },
+                        option2 = new
+                        {
+                            description = "Check for common naming issues",
+                            note = "Reserved words like 'CreatedDate', 'ChangedDate', 'Owner', etc. should not be used as attribute names"
+                        },
+                        option3 = new
+                        {
+                            description = "Manual verification",
+                            note = "Check the Errors panel in Mendix Studio Pro (View -> Errors)"
+                        }
+                    },
+                    common_errors = new[]
+                    {
+                        new { code = "CE7247", message = "Attribute name is a reserved word", solution = "Rename the attribute to avoid reserved words" },
+                        new { code = "CE0552", message = "Entity has no generalization or attributes", solution = "Add attributes or set generalization" },
+                        new { code = "CE0103", message = "Association owner must be 'Both'", solution = "Change association owner property" }
+                    },
+                    api_limitation = "This is a known limitation of the Mendix Studio Pro Extensions API v8.0. Error checking can only be done by creating custom ConsistencyCheckExtension implementations, not by reading existing errors."
+                }, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetProjectErrors");
+                SetLastError("Error getting project errors", ex);
+                return JsonSerializer.Serialize(new { error = ex.Message, details = ex.ToString() });
+            }
+        }
+
         public async Task<object> ListAvailableTools(JsonObject arguments)
         {
             try
@@ -734,6 +797,7 @@ namespace MCPExtension.Tools
                     "list_modules",
                     "list_enumerations",
                     "get_last_error",
+                    "get_project_errors",
                     "list_available_tools",
                     "debug_info",
                     "read_microflow_details",
