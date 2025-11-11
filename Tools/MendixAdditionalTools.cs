@@ -732,6 +732,7 @@ namespace MCPExtension.Tools
                     "generate_overview_pages",
                     "list_microflows",
                     "list_modules",
+                    "list_enumerations",
                     "get_last_error",
                     "list_available_tools",
                     "debug_info",
