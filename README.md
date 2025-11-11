@@ -351,31 +351,34 @@ The extension correctly maps association types as follows:
 
 ### Critical Issues
 
-#### 1. list_modules Tool Broken
-- **Status**: 🔴 Critical
+#### 1. ✅ FIXED - list_modules Tool (November 2025)
+- **Status**: ✅ Fixed
 - **Issue**: Dictionary key error when calling `list_modules`
-- **Impact**: Breaks discovery workflow - users cannot list available modules
-- **Priority**: P0 - Should be the most reliable tool for initial discovery
-- **Fix Required**: Debug dictionary access in module enumeration logic
+- **Fix**: Changed to use generic `GetModuleDocuments<IDocument>()` with proper error handling
+- **Commit**: ad9da41
 
-#### 2. Success/Error Reporting Inconsistency
-- **Status**: 🔴 Critical
-- **Issue**: Tools report errors but actually succeed (e.g., "Collection was modified..." error during `create_entity`)
-- **Impact**: Creates confusion, triggers unnecessary retry attempts, masks actual success
-- **Priority**: P0 - Breaks trust in tool responses
-- **Fix Required**: Ensure clean success/failure states - no partial success with error messages
+#### 2. ✅ FIXED - Success/Error Reporting Inconsistency (November 2025)
+- **Status**: ✅ Fixed
+- **Issue**: Tools reported errors but actually succeeded (e.g., "Collection was modified..." error during `create_entity`)
+- **Fix**: Materialized collections with `.ToList()` before enumeration to avoid live collection modification
+- **Commit**: ad9da41
 
 ### Parameter Handling Issues
 
-#### 3. module_name Inconsistency
-- **Status**: 🟡 High Priority
-- **Issue**: `module_name` is required for almost every tool but often missing from documented required parameters
-- **Impact**: Unexpected errors, poor user experience, trial-and-error discovery
-- **Recommended Solutions**:
-  - **Option A**: Add `module_name` to all tool schemas as explicitly required
-  - **Option B**: Implement "working module" context that can be set once per session
-  - **Option C**: Default to first/only module when project has single module
-- **Fix Required**: Schema updates + context management implementation
+#### 3. ✅ FIXED - module_name Inconsistency (November 2025)
+- **Status**: ✅ Fixed
+- **Issue**: `module_name` was required for almost every tool but often missing from documented required parameters
+- **Solution Implemented**: Added `module_name` to all tool schemas as explicitly required parameter with descriptions
+- **Fixed Tools**: 
+  - `create_entity` - Now requires module_name
+  - `create_association` - Now requires module_name
+  - `create_multiple_entities` - Now requires module_name
+  - `create_multiple_associations` - Now requires module_name
+  - `create_domain_model_from_schema` - Now requires module_name
+  - `delete_model_element` - Now requires module_name
+  - `generate_overview_pages` - Now requires module_name
+  - `diagnose_associations` - Module_name is optional
+- **Commit**: (current)
 
 #### 4. Parameter Validation Timing
 - **Status**: 🟡 High Priority

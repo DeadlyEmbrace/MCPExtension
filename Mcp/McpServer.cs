@@ -604,6 +604,7 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module where the entity will be created" },
                         entity_name = new { type = "string" },
                         attributes = new
                         {
@@ -624,25 +625,27 @@ namespace MCPExtension.MCP
                             }
                         }
                     },
-                    required = new[] { "entity_name", "attributes" }
+                    required = new[] { "module_name", "entity_name", "attributes" }
                 },
                 "create_association" => new
                 {
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module containing the entities" },
                         name = new { type = "string" },
                         parent = new { type = "string" },
                         child = new { type = "string" },
                         type = new { type = "string" }
                     },
-                    required = new[] { "name", "parent", "child" }
+                    required = new[] { "module_name", "name", "parent", "child" }
                 },
                 "create_multiple_associations" => new
                 {
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module containing the entities" },
                         associations = new
                         {
                             type = "array",
@@ -660,13 +663,14 @@ namespace MCPExtension.MCP
                             }
                         }
                     },
-                    required = new[] { "associations" }
+                    required = new[] { "module_name", "associations" }
                 },
                 "create_domain_model_from_schema" => new
                 {
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module where the domain model will be created" },
                         schema = new
                         {
                             type = "object",
@@ -720,24 +724,28 @@ namespace MCPExtension.MCP
                             }
                         }
                     },
-                    required = new[] { "schema" }
+                    required = new[] { "module_name", "schema" }
                 },
                 "delete_model_element" => new
                 {
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module containing the element" },
                         element_type = new { type = "string" },
                         entity_name = new { type = "string" },
                         attribute_name = new { type = "string" },
                         association_name = new { type = "string" }
                     },
-                    required = new[] { "element_type", "entity_name" }
+                    required = new[] { "module_name", "element_type", "entity_name" }
                 },
                 "diagnose_associations" => new
                 {
                     type = "object",
-                    properties = new { },
+                    properties = new 
+                    { 
+                        module_name = new { type = "string", description = "Name of the module to diagnose (optional)" }
+                    },
                     required = new string[0]
                 },
                 "create_multiple_entities" => new
@@ -745,6 +753,7 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module where entities will be created" },
                         entities = new
                         {
                             type = "array",
@@ -776,7 +785,7 @@ namespace MCPExtension.MCP
                             }
                         }
                     },
-                    required = new[] { "entities" }
+                    required = new[] { "module_name", "entities" }
                 },
                 "save_data" => new
                 {
@@ -805,6 +814,7 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new
                     {
+                        module_name = new { type = "string", description = "Name of the module containing the entities" },
                         entity_names = new
                         {
                             type = "array",
@@ -812,7 +822,7 @@ namespace MCPExtension.MCP
                         },
                         generate_index_snippet = new { type = "boolean" }
                     },
-                    required = new[] { "entity_names" }
+                    required = new[] { "module_name", "entity_names" }
                 },
                 "list_microflows" => new
                 {
