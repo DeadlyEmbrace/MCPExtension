@@ -562,7 +562,7 @@ namespace MCPExtension.MCP
       "read_domain_model" => "Read the domain model structure for a specific module. Requires module_name parameter.",
        "create_entity" => "Create a new entity in the domain model",
                 "create_association" => "Create a new association between entities",
-                "delete_model_element" => "Delete an element from the domain model",
+                "delete_model_element" => "Delete an element from the domain model (entity, attribute, association, or enumeration)",
                 "diagnose_associations" => "Diagnose association creation issues",
                 "create_multiple_entities" => "Create multiple entities at once",
                 "create_multiple_associations" => "Create multiple associations at once",
@@ -733,12 +733,13 @@ namespace MCPExtension.MCP
                     properties = new
                     {
                         module_name = new { type = "string", description = "Name of the module containing the element" },
-                        element_type = new { type = "string" },
-                        entity_name = new { type = "string" },
-                        attribute_name = new { type = "string" },
-                        association_name = new { type = "string" }
+                        element_type = new { type = "string", description = "Type of element to delete: 'entity', 'attribute', 'association', or 'enumeration'" },
+                        entity_name = new { type = "string", description = "Name of the entity (required for entity, attribute, and association deletion)" },
+                        attribute_name = new { type = "string", description = "Name of the attribute (required for attribute deletion)" },
+                        association_name = new { type = "string", description = "Name of the association (required for association deletion)" },
+                        enumeration_name = new { type = "string", description = "Name of the enumeration (required for enumeration deletion)" }
                     },
-                    required = new[] { "module_name", "element_type", "entity_name" }
+                    required = new[] { "module_name", "element_type" }
                 },
                 "diagnose_associations" => new
                 {

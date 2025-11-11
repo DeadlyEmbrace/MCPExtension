@@ -813,11 +813,7 @@ if (parentEntity == null)
                 var entityName = parameters["entity_name"]?.ToString();
                 var attributeName = parameters["attribute_name"]?.ToString();
                 var associationName = parameters["association_name"]?.ToString();
-
-                if (string.IsNullOrEmpty(elementType) || string.IsNullOrEmpty(entityName))
-                {
-                    return JsonSerializer.Serialize(new { error = "Element type and entity name are required" });
-                }
+                var enumerationName = parameters["enumeration_name"]?.ToString();
 
                 // Get module with validation
                 var (module, error) = GetModuleByName(moduleName);
@@ -826,12 +822,25 @@ if (parentEntity == null)
                     return error!;
                 }
 
+                if (string.IsNullOrEmpty(elementType))
+                {
+                    return JsonSerializer.Serialize(new { error = "Element type is required" });
+                }
+
                 switch (elementType.ToLower())
                 {
                     case "entity":
+                        if (string.IsNullOrEmpty(entityName))
+                        {
+                            return JsonSerializer.Serialize(new { error = "Entity name is required for entity deletion" });
+                        }
                         return DeleteEntity(module.DomainModel, entityName);
                     
                     case "attribute":
+                        if (string.IsNullOrEmpty(entityName))
+                        {
+                            return JsonSerializer.Serialize(new { error = "Entity name is required for attribute deletion" });
+                        }
                         if (string.IsNullOrEmpty(attributeName))
                         {
                             return JsonSerializer.Serialize(new { error = "Attribute name is required for attribute deletion" });
@@ -839,14 +848,29 @@ if (parentEntity == null)
                         return DeleteAttribute(module.DomainModel, entityName, attributeName);
                     
                     case "association":
+                        if (string.IsNullOrEmpty(entityName))
+                        {
+                            return JsonSerializer.Serialize(new { error = "Entity name is required for association deletion" });
+                        }
                         if (string.IsNullOrEmpty(associationName))
                         {
                             return JsonSerializer.Serialize(new { error = "Association name is required for association deletion" });
                         }
                         return DeleteAssociation(module.DomainModel, entityName, associationName);
                     
+                    case "enumeration":
+                        if (string.IsNullOrEmpty(enumerationName))
+                        {
+                            return JsonSerializer.Serialize(new { error = "Enumeration name is required for enumeration deletion" });
+                        }
+                        return DeleteEnumeration(module, enumerationName);
+                    
                     default:
-                        return JsonSerializer.Serialize(new { error = $"Unknown deletion type: {elementType}" });
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            error = $"Unknown deletion type: {elementType}",
+                            supportedTypes = new[] { "entity", "attribute", "association", "enumeration" }
+                        });
                 }
             }
             catch (Exception ex)
@@ -1371,6 +1395,76 @@ if (parentEntity == null)
                     success = true, 
                     message = $"Association '{associationName}' deleted successfully" 
                 });
+            }
+        }
+
+        private string DeleteEnumeration(IModule module, string enumerationName)
+        {
+            using (var transaction = _model.StartTransaction("Delete Enumeration"))
+            {
+                try
+                {
+                    // Find the enumeration in the module
+                    var enumerations = _model.Root.GetModuleDocuments<IEnumeration>(module).ToList();
+                    var enumeration = enumerations.FirstOrDefault(e => e.Name.Equals(enumerationName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (enumeration == null)
+                    {
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            error = $"Enumeration '{enumerationName}' not found in module '{module.Name}'",
+                            availableEnumerations = enumerations.Select(e => e.Name).ToArray()
+                        });
+                    }
+
+                    // Check if the enumeration is in use by any attributes
+                    var entitiesUsingEnum = new List<string>();
+                    foreach (var entity in module.DomainModel.GetEntities())
+                    {
+                        foreach (var attribute in entity.GetAttributes())
+                        {
+                            if (attribute.Type is IEnumerationAttributeType enumType)
+                            {
+                                var resolvedEnum = enumType.Enumeration.Resolve();
+                                if (resolvedEnum != null && resolvedEnum.QualifiedName == enumeration.QualifiedName)
+                                {
+                                    entitiesUsingEnum.Add($"{entity.Name}.{attribute.Name}");
+                                }
+                            }
+                        }
+                    }
+
+                    // If the enumeration is in use, return an error with details
+                    if (entitiesUsingEnum.Any())
+                    {
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            error = $"Cannot delete enumeration '{enumerationName}' because it is in use",
+                            usedBy = entitiesUsingEnum.ToArray(),
+                            message = "Delete or modify the attributes using this enumeration first"
+                        });
+                    }
+
+                    // Delete the enumeration
+                    module.RemoveDocument(enumeration);
+                    transaction.Commit();
+
+                    _logger.LogInformation($"Deleted enumeration '{enumerationName}' from module '{module.Name}'");
+                    
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        success = true, 
+                        message = $"Enumeration '{enumerationName}' deleted successfully from module '{module.Name}'" 
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error deleting enumeration '{enumerationName}'");
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        error = $"Failed to delete enumeration '{enumerationName}': {ex.Message}" 
+                    });
+                }
             }
         }
 
