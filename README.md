@@ -363,9 +363,21 @@ The extension correctly maps association types as follows:
 - **Fix**: Materialized collections with `.ToList()` before enumeration to avoid live collection modification
 - **Commit**: ad9da41
 
+#### 3. ✅ FIXED - Duplicate Enumeration Creation (November 2025)
+- **Status**: ✅ Fixed
+- **Issue**: Creating entities with enumeration attributes resulted in duplicate enumerations (e.g., PriorityEnum created twice)
+- **Root Cause**: `CreateEnumerationType` always created new enumerations without checking if identical ones existed
+- **Fix**: Rewrote `CreateEnumerationType` to:
+  - Check if enumeration with same name and values exists in module
+  - Reuse existing enumeration if found (return reference)
+  - Only create new enumeration if no match exists
+  - Removed obsolete static `UsedNames` HashSet and `GetUniqueName` method
+- **Impact**: No more duplicate enumerations, cleaner domain models, proper reuse across entity creation
+- **Commit**: 6927bd7
+
 ### Parameter Handling Issues
 
-#### 3. ✅ FIXED - module_name Inconsistency (November 2025)
+#### 4. ✅ FIXED - module_name Inconsistency (November 2025)
 - **Status**: ✅ Fixed
 - **Issue**: `module_name` was required for almost every tool but often missing from documented required parameters
 - **Solution Implemented**: Added `module_name` to all tool schemas as explicitly required parameter with descriptions
@@ -378,9 +390,9 @@ The extension correctly maps association types as follows:
   - `delete_model_element` - Now requires module_name
   - `generate_overview_pages` - Now requires module_name
   - `diagnose_associations` - Module_name is optional
-- **Commit**: (current)
+- **Commit**: b4bb00c
 
-#### 4. Parameter Validation Timing
+#### 5. Parameter Validation Timing
 - **Status**: 🟡 High Priority
 - **Issue**: Tools fail mid-execution rather than validating parameters upfront
 - **Impact**: Wasted operations, unclear error messages, potential partial state changes
@@ -388,7 +400,7 @@ The extension correctly maps association types as follows:
 
 ### Missing Functionality
 
-#### 5. Entity Update Capability
+#### 6. Entity Update Capability
 - **Status**: 🟠 Medium Priority
 - **Issue**: Can create or delete entities, but cannot add attributes to existing entities
 - **Current Workaround**: Delete and recreate entire entity
@@ -398,7 +410,7 @@ The extension correctly maps association types as follows:
   - `update_attribute` - Modify existing attribute properties
   - `remove_attribute` - Delete specific attributes without removing entity
 
-#### 6. Lightweight Discovery Tools
+#### 7. Lightweight Discovery Tools
 - **Status**: 🟠 Medium Priority
 - **Issue**: Full domain model reads are heavy; need quick discovery options
 - **Required Tools**:
@@ -407,7 +419,7 @@ The extension correctly maps association types as follows:
   - `entity_exists` - Quick existence check without loading full entity
   - `get_entity_summary` - Lightweight entity info (name, attributes, type only)
 
-#### 7. Microflow Tool Exposure
+#### 8. Microflow Tool Exposure
 - **Status**: 🟠 Medium Priority
 - **Issue**: Microflow tools appear in `list_available_tools` but aren't exposed through MCP interface
 - **Impact**: Advertised functionality is unusable
@@ -420,7 +432,7 @@ The extension correctly maps association types as follows:
 
 ### Enhanced Capabilities
 
-#### 8. Batch Operation Error Handling
+#### 9. Batch Operation Error Handling
 - **Status**: 🟢 Low Priority
 - **Issue**: `create_multiple_entities` doesn't report which entities succeeded/failed in partial failures
 - **Impact**: Unclear state after batch operations, difficult rollback
@@ -440,13 +452,13 @@ The extension correctly maps association types as follows:
   }
   ```
 
-#### 9. Validation-Only Modes
+#### 10. Validation-Only Modes
 - **Status**: 🟢 Low Priority
 - **Issue**: No way to test entity/association creation without committing changes
 - **Required Enhancement**: Add `dry_run` or `validate_only` parameter to creation tools
 - **Benefits**: Safe testing, parameter validation without side effects
 
-#### 10. Project Context Tool
+#### 11. Project Context Tool
 - **Status**: 🟢 Low Priority
 - **Issue**: No tool to get current project information for orientation
 - **Required Tool**: `get_project_info`
@@ -462,7 +474,7 @@ The extension correctly maps association types as follows:
 
 ### Documentation Issues
 
-#### 11. Parameter Documentation Clarity
+#### 12. Parameter Documentation Clarity
 - **Status**: 🟡 High Priority
 - **Issue**: Unclear which parameters are truly required vs optional (especially `module_name`)
 - **Fix Required**:
@@ -471,7 +483,7 @@ The extension correctly maps association types as follows:
   - Add parameter examples to each tool description
   - Specify module_name requirements explicitly in every tool
 
-#### 12. Error Message Quality
+#### 13. Error Message Quality
 - **Status**: 🟡 High Priority
 - **Issue**: Generic error messages don't guide users to solutions
 - **Required Enhancement**:
