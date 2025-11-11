@@ -12,6 +12,7 @@ using Mendix.StudioPro.ExtensionsAPI.Model.Microflows;
 using Mendix.StudioPro.ExtensionsAPI.Model.Microflows.Actions;
 using Mendix.StudioPro.ExtensionsAPI.Model.MicroflowExpressions;
 using Mendix.StudioPro.ExtensionsAPI.Model.DomainModels;
+using Mendix.StudioPro.ExtensionsAPI.Model.Enumerations;
 using Mendix.StudioPro.ExtensionsAPI.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -831,6 +832,102 @@ catch (Exception ex)
            SetLastError("Error listing modules", ex);
          return JsonSerializer.Serialize(new { error = ex.Message });
        }
+        }
+
+        public async Task<string> ListEnumerations(JsonObject parameters)
+        {
+            try
+            {
+                var moduleName = parameters["module_name"]?.ToString();
+                
+                if (string.IsNullOrWhiteSpace(moduleName))
+                {
+                    var availableModules = _model.Root.GetModules()
+                        .Where(m => m != null && !m.FromAppStore)
+                        .Select(m => m.Name)
+                        .ToList();
+
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "Module name is required",
+                        message = "Please provide a 'module_name' parameter",
+                        available_modules = availableModules,
+                        hint = "Use the list_modules tool to see all available modules",
+                        example = new { module_name = availableModules.FirstOrDefault() ?? "MyFirstModule" }
+                    });
+                }
+
+                var modules = _model.Root.GetModules();
+                var module = modules.FirstOrDefault(m => m?.Name.Equals(moduleName, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (module == null)
+                {
+                    var availableModules = modules
+                        .Where(m => m != null && !m.FromAppStore)
+                        .Select(m => m.Name)
+                        .ToList();
+
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = $"Module '{moduleName}' not found",
+                        message = "The specified module does not exist in the project",
+                        available_modules = availableModules,
+                        hint = "Use the list_modules tool to see all available modules"
+                    });
+                }
+
+                // Get all enumerations from the module
+                var enumerations = _model.Root.GetModuleDocuments<IEnumeration>(module).ToList();
+
+                var enumerationInfo = enumerations.Select(enumeration =>
+                {
+                    try
+                    {
+                        var values = enumeration.GetValues()
+                            .Select(v => new
+                            {
+                                name = v.Name,
+                                caption = v.Caption?.ToString() ?? v.Name
+                            })
+                            .ToArray();
+
+                        return new
+                        {
+                            name = enumeration.Name,
+                            qualifiedName = enumeration.QualifiedName,
+                            valueCount = values.Length,
+                            values = values.Cast<object>().ToArray(),
+                            error = (string?)null
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Error getting details for enumeration {enumeration.Name}");
+                        return new
+                        {
+                            name = enumeration.Name,
+                            qualifiedName = enumeration.QualifiedName,
+                            valueCount = 0,
+                            values = new object[0],
+                            error = (string?)"Failed to retrieve enumeration values"
+                        };
+                    }
+                }).ToArray();
+
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    moduleName = module.Name,
+                    totalEnumerations = enumerations.Count,
+                    enumerations = enumerationInfo
+                }, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error listing enumerations");
+                SetLastError("Error listing enumerations", ex);
+                return JsonSerializer.Serialize(new { error = ex.Message, details = ex.ToString() });
+            }
         }
 
         public async Task<object> AddCreateObjectActivity(JsonObject arguments)

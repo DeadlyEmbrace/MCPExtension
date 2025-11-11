@@ -141,6 +141,11 @@ namespace MCPExtension
               var result = await additionalTools.ListModules(parameters);
             return (object)result;
             });
+            _mcpServer.RegisterTool("list_enumerations", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.ListEnumerations(parameters);
+                return (object)result;
+            });
       _mcpServer.RegisterTool("get_last_error", async (JsonObject parameters) => 
             {
       var result = await additionalTools.GetLastError(parameters);
@@ -235,7 +240,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 17, // Updated number of registered tools (added list_modules, removed create_microflow_activities temporarily)
+                registeredTools = 18, // Updated number of registered tools (added list_modules, list_enumerations)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",

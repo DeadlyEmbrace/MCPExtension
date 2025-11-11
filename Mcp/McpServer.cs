@@ -571,6 +571,7 @@ namespace MCPExtension.MCP
                 "generate_overview_pages" => "Generate overview pages for entities",
                 "list_microflows" => "List all microflows in a module",
                 "list_modules" => "List all modules in the Mendix project with basic information",
+                "list_enumerations" => "List all enumerations in a specific module with their values",
                 "get_last_error" => "Get details about the last error",
                 "list_available_tools" => "List all available tools",
                 "debug_info" => "Get comprehensive debug information about the domain model",
@@ -838,6 +839,15 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new { },
                     required = new string[0]
+                },
+                "list_enumerations" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module to list enumerations from" }
+                    },
+                    required = new[] { "module_name" }
                 },
                 "get_last_error" => new
                 {
