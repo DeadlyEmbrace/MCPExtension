@@ -347,6 +347,144 @@ The extension correctly maps association types as follows:
 
 **Note**: This mapping was fixed in August 2025 to ensure `ReferenceSet` properly creates many-to-many associations instead of incorrectly creating one-to-many associations.
 
+## Known Issues & Improvement Roadmap
+
+### Critical Issues
+
+#### 1. list_modules Tool Broken
+- **Status**: 🔴 Critical
+- **Issue**: Dictionary key error when calling `list_modules`
+- **Impact**: Breaks discovery workflow - users cannot list available modules
+- **Priority**: P0 - Should be the most reliable tool for initial discovery
+- **Fix Required**: Debug dictionary access in module enumeration logic
+
+#### 2. Success/Error Reporting Inconsistency
+- **Status**: 🔴 Critical
+- **Issue**: Tools report errors but actually succeed (e.g., "Collection was modified..." error during `create_entity`)
+- **Impact**: Creates confusion, triggers unnecessary retry attempts, masks actual success
+- **Priority**: P0 - Breaks trust in tool responses
+- **Fix Required**: Ensure clean success/failure states - no partial success with error messages
+
+### Parameter Handling Issues
+
+#### 3. module_name Inconsistency
+- **Status**: 🟡 High Priority
+- **Issue**: `module_name` is required for almost every tool but often missing from documented required parameters
+- **Impact**: Unexpected errors, poor user experience, trial-and-error discovery
+- **Recommended Solutions**:
+  - **Option A**: Add `module_name` to all tool schemas as explicitly required
+  - **Option B**: Implement "working module" context that can be set once per session
+  - **Option C**: Default to first/only module when project has single module
+- **Fix Required**: Schema updates + context management implementation
+
+#### 4. Parameter Validation Timing
+- **Status**: 🟡 High Priority
+- **Issue**: Tools fail mid-execution rather than validating parameters upfront
+- **Impact**: Wasted operations, unclear error messages, potential partial state changes
+- **Fix Required**: Validate all parameters before beginning operations
+
+### Missing Functionality
+
+#### 5. Entity Update Capability
+- **Status**: 🟠 Medium Priority
+- **Issue**: Can create or delete entities, but cannot add attributes to existing entities
+- **Current Workaround**: Delete and recreate entire entity
+- **Impact**: Data loss risk, workflow inefficiency
+- **Required Tools**:
+  - `add_attribute_to_entity` - Add new attributes to existing entities
+  - `update_attribute` - Modify existing attribute properties
+  - `remove_attribute` - Delete specific attributes without removing entity
+
+#### 6. Lightweight Discovery Tools
+- **Status**: 🟠 Medium Priority
+- **Issue**: Full domain model reads are heavy; need quick discovery options
+- **Required Tools**:
+  - `list_entities` - List entity names across all/specific modules without full details
+  - `list_associations` - List associations without complete relationship graphs
+  - `entity_exists` - Quick existence check without loading full entity
+  - `get_entity_summary` - Lightweight entity info (name, attributes, type only)
+
+#### 7. Microflow Tool Exposure
+- **Status**: 🟠 Medium Priority
+- **Issue**: Microflow tools appear in `list_available_tools` but aren't exposed through MCP interface
+- **Impact**: Advertised functionality is unusable
+- **Affected Tools**:
+  - `create_microflow`
+  - `create_microflow_activities`
+  - `list_microflows`
+  - `read_microflow_details`
+- **Fix Required**: Register microflow tools in MCP server initialization
+
+### Enhanced Capabilities
+
+#### 8. Batch Operation Error Handling
+- **Status**: 🟢 Low Priority
+- **Issue**: `create_multiple_entities` doesn't report which entities succeeded/failed in partial failures
+- **Impact**: Unclear state after batch operations, difficult rollback
+- **Required Enhancement**:
+  ```json
+  {
+    "success": false,
+    "partial_success": true,
+    "succeeded": ["Entity1", "Entity3"],
+    "failed": [
+      {"entity": "Entity2", "error": "Template not found"},
+      {"entity": "Entity4", "error": "Invalid attribute type"}
+    ],
+    "total": 4,
+    "success_count": 2,
+    "failure_count": 2
+  }
+  ```
+
+#### 9. Validation-Only Modes
+- **Status**: 🟢 Low Priority
+- **Issue**: No way to test entity/association creation without committing changes
+- **Required Enhancement**: Add `dry_run` or `validate_only` parameter to creation tools
+- **Benefits**: Safe testing, parameter validation without side effects
+
+#### 10. Project Context Tool
+- **Status**: 🟢 Low Priority
+- **Issue**: No tool to get current project information for orientation
+- **Required Tool**: `get_project_info`
+  ```json
+  {
+    "project_name": "MyApp",
+    "project_version": "10.24.2",
+    "modules": ["Module1", "Module2"],
+    "default_module": "Module1",
+    "project_path": "C:\\Mendix Projects\\MyApp"
+  }
+  ```
+
+### Documentation Issues
+
+#### 11. Parameter Documentation Clarity
+- **Status**: 🟡 High Priority
+- **Issue**: Unclear which parameters are truly required vs optional (especially `module_name`)
+- **Fix Required**:
+  - Review all tool schemas for accurate `required` arrays
+  - Document default behaviors when optional parameters omitted
+  - Add parameter examples to each tool description
+  - Specify module_name requirements explicitly in every tool
+
+#### 12. Error Message Quality
+- **Status**: 🟡 High Priority
+- **Issue**: Generic error messages don't guide users to solutions
+- **Required Enhancement**:
+  - Include parameter name in validation errors
+  - Suggest valid values for enumeration parameters
+  - Provide troubleshooting hints in error responses
+  - Reference related tools for common workflows
+
+### Activity Insertion Order Bug
+
+#### ✅ FIXED (November 2025)
+- **Issue**: Activities appeared in reverse/random order in microflows
+- **Root Cause**: `GetAllMicroflowActivities()` returns activities in undefined order per API docs
+- **Solution**: Always use `TryInsertAfterStart` for sequential insertion
+- **Status**: Fixed and documented in `BUG_FIX_INSERTION_ORDER.md`
+
 ## Development
 
 ### Dependencies

@@ -776,14 +776,48 @@ namespace MCPExtension.Tools
        });
       }
 
-      var moduleInfo = modules.Select(module => new
-       {
-    name = module.Name,
-      fromAppStore = module.FromAppStore,
-       hasDomainModel = module.DomainModel != null,
-     entityCount = module.DomainModel?.GetEntities()?.Count() ?? 0,
-       documentCount = _model.Root.GetModuleDocuments(module)?.Count() ?? 0
-       }).ToArray();
+      var moduleInfo = modules.Select(module => 
+      {
+          try
+          {
+              var entityCount = module.DomainModel?.GetEntities()?.Count() ?? 0;
+              
+              // Get document count safely - use generic version
+              int documentCount = 0;
+              try
+              {
+                  var documents = _model.Root.GetModuleDocuments<IDocument>(module);
+                  documentCount = documents?.Count() ?? 0;
+              }
+              catch
+              {
+                  documentCount = 0;
+              }
+
+              return new
+              {
+                  name = module.Name,
+                  fromAppStore = module.FromAppStore,
+                  hasDomainModel = module.DomainModel != null,
+                  entityCount = entityCount,
+                  documentCount = documentCount,
+                  error = (string?)null
+              };
+          }
+          catch (Exception ex)
+          {
+              _logger.LogWarning(ex, $"Error getting info for module {module.Name}");
+              return new
+              {
+                  name = module.Name,
+                  fromAppStore = module.FromAppStore,
+                  hasDomainModel = false,
+                  entityCount = 0,
+                  documentCount = 0,
+                  error = (string?)"Failed to retrieve complete module info"
+              };
+          }
+      }).ToArray();
 
             return JsonSerializer.Serialize(new { 
    success = true,

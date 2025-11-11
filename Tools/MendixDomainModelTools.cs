@@ -255,6 +255,13 @@ namespace MCPExtension.Tools
 
      transaction.Commit();
 
+     // Get attributes after commit to avoid collection modification errors
+     var attributes = mxEntity.GetAttributes().ToList().Select(a => new
+     {
+         name = a.Name,
+         type = a.Type?.GetType().Name ?? "Unknown"
+     }).ToArray();
+
           return JsonSerializer.Serialize(new 
          { 
 success = true, 
@@ -265,11 +272,7 @@ success = true,
   module = moduleName,
   persistable = persistable,
     entityType = entityType,
-   attributes = mxEntity.GetAttributes().Select(a => new
-        {
-      name = a.Name,
-          type = a.Type?.GetType().Name ?? "Unknown"
-       }).ToArray()
+   attributes = attributes
       }
          });
          }
