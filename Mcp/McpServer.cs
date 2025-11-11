@@ -581,6 +581,8 @@ namespace MCPExtension.MCP
                 "add_pages_to_navigation" => "Add pages to the responsive web navigation profile. Use this to make pages accessible through the app's main navigation menu. Check for duplicates before adding.",
                 "list_navigation_items" => "List all navigation items across all navigation profiles. Shows navigation document structure and types available in the Extensions API.",
                 "remove_pages_from_navigation" => "Remove pages from navigation profiles. NOTE: API LIMITATION - Direct removal not supported, manual workaround provided.",
+                "list_page_properties" => "List available properties of a page. NOTE: API LIMITATION - IPage interface only exposes Name property. Other properties (title, URL, layout, widgets) not accessible.",
+                "rename_page" => "Rename a page in a module. This is the ONLY page modification operation supported by the Extensions API.",
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
                 "read_microflow_activities" => "Get comprehensive details about a microflow including all activities, input parameters, and return type. Shows activity properties, types, and positions.",
@@ -1093,6 +1095,49 @@ namespace MCPExtension.MCP
                     },
                     required = new string[0],
                     description = "API LIMITATION: Navigation item removal not directly supported. Returns workaround instructions for manual removal."
+                },
+                "list_page_properties" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new
+                        {
+                            type = "string",
+                            description = "Name of the module containing the page"
+                        },
+                        page_name = new
+                        {
+                            type = "string",
+                            description = "Name of the page to inspect"
+                        }
+                    },
+                    required = new[] { "module_name", "page_name" },
+                    description = "Lists page information. API LIMITATION: IPage interface only exposes Name property. Other page properties (title, URL, layout, widgets) are not accessible through the Extensions API."
+                },
+                "rename_page" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new
+                        {
+                            type = "string",
+                            description = "Name of the module containing the page"
+                        },
+                        page_name = new
+                        {
+                            type = "string",
+                            description = "Current name of the page to rename"
+                        },
+                        new_name = new
+                        {
+                            type = "string",
+                            description = "New name for the page"
+                        }
+                    },
+                    required = new[] { "module_name", "page_name", "new_name" },
+                    description = "Renames a page. This is the ONLY page modification operation supported by the Extensions API."
                 },
                 "debug_info" => new
                 {

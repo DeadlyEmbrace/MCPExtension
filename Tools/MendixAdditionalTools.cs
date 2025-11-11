@@ -813,7 +813,9 @@ namespace MCPExtension.Tools
                     "create_microflow_activities_sequence",
                     "add_pages_to_navigation",
                     "list_navigation_items",
-                    "remove_pages_from_navigation"
+                    "remove_pages_from_navigation",
+                    "list_page_properties",
+                    "rename_page"
                 };
 
                 return JsonSerializer.Serialize(new { available_tools = tools });
@@ -1048,6 +1050,181 @@ namespace MCPExtension.Tools
                     error = ex.Message,
                     success = false,
                     stack_trace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lists available page information (read-only exploration)
+        /// </summary>
+        public async Task<string> ListPageProperties(JsonObject parameters)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    return JsonSerializer.Serialize(new { error = "IModel instance is null", success = false });
+                }
+
+                var moduleName = parameters["module_name"]?.ToString();
+                var pageName = parameters["page_name"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(pageName))
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "Both module_name and page_name are required",
+                        success = false,
+                        example = new { module_name = "MyFirstModule", page_name = "Home" }
+                    });
+                }
+
+                // Get module
+                var (module, moduleError) = GetModuleByName(moduleName);
+                if (module == null)
+                {
+                    return JsonSerializer.Serialize(new { error = moduleError, success = false });
+                }
+
+                // Find page
+                var page = _model.Root.GetModuleDocuments<IPage>(module)
+                    .FirstOrDefault(p => p.Name.Equals(pageName, StringComparison.OrdinalIgnoreCase));
+
+                if (page == null)
+                {
+                    var availablePages = _model.Root.GetModuleDocuments<IPage>(module)
+                        .Select(p => p.Name)
+                        .ToArray();
+                    
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = $"Page '{pageName}' not found in module '{moduleName}'",
+                        success = false,
+                        available_pages = availablePages
+                    });
+                }
+
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    module = moduleName,
+                    page_name = page.Name,
+                    note = "⚠️ API LIMITATION: IPage interface only exposes Name property",
+                    limitations = new
+                    {
+                        message = "The Extensions API does not provide access to page properties like title, URL, layout, or widgets",
+                        reason = "IPage only inherits from IDocument (which has Name property)",
+                        untyped_model = "The untyped model API (IModelProperty) has read-only Value property",
+                        what_works = "✅ You can rename pages using rename_page tool"
+                    },
+                    workaround = "To modify page properties: Open page in Studio Pro → Edit properties manually"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error listing page properties");
+                return JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    stack_trace = ex.StackTrace,
+                    success = false
+                });
+            }
+        }
+
+        /// <summary>
+        /// Renames a page (only supported page modification operation)
+        /// </summary>
+        public async Task<string> RenamePage(JsonObject parameters)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    return JsonSerializer.Serialize(new { error = "IModel instance is null", success = false });
+                }
+
+                var moduleName = parameters["module_name"]?.ToString();
+                var pageName = parameters["page_name"]?.ToString();
+                var newName = parameters["new_name"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(moduleName) || string.IsNullOrWhiteSpace(pageName) || string.IsNullOrWhiteSpace(newName))
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "module_name, page_name, and new_name are all required",
+                        success = false,
+                        example = new
+                        {
+                            module_name = "MyFirstModule",
+                            page_name = "Home",
+                            new_name = "HomePage"
+                        }
+                    });
+                }
+
+                // Get module
+                var (module, moduleError) = GetModuleByName(moduleName);
+                if (module == null)
+                {
+                    return JsonSerializer.Serialize(new { error = moduleError, success = false });
+                }
+
+                // Find page
+                var page = _model.Root.GetModuleDocuments<IPage>(module)
+                    .FirstOrDefault(p => p.Name.Equals(pageName, StringComparison.OrdinalIgnoreCase));
+
+                if (page == null)
+                {
+                    var availablePages = _model.Root.GetModuleDocuments<IPage>(module)
+                        .Select(p => p.Name)
+                        .ToArray();
+                    
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = $"Page '{pageName}' not found in module '{moduleName}'",
+                        success = false,
+                        available_pages = availablePages
+                    });
+                }
+
+                // Check if new name already exists
+                var existingPage = _model.Root.GetModuleDocuments<IPage>(module)
+                    .FirstOrDefault(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+
+                if (existingPage != null)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = $"A page named '{newName}' already exists in module '{moduleName}'",
+                        success = false
+                    });
+                }
+
+                // Rename the page
+                using var transaction = _model.StartTransaction($"Rename page '{pageName}' to '{newName}'");
+                var oldName = page.Name;
+                page.Name = newName;
+                transaction.Commit();
+
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    message = $"Successfully renamed page from '{oldName}' to '{newName}'",
+                    module = moduleName,
+                    old_name = oldName,
+                    new_name = newName,
+                    note = "This is the ONLY page modification operation supported by the Extensions API"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error renaming page");
+                return JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    stack_trace = ex.StackTrace,
+                    success = false
                 });
             }
         }
