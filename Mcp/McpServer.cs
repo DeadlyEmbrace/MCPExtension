@@ -561,6 +561,9 @@ namespace MCPExtension.MCP
             {
       "read_domain_model" => "Read the domain model structure for a specific module. Requires module_name parameter.",
        "create_entity" => "Create a new entity in the domain model",
+                "modify_entity" => "Modify an existing entity by adding, removing, renaming, or updating attributes",
+                "update_entity_layout" => "Update the visual layout/positioning of entities in the domain model (grid, horizontal, vertical, circular, or custom positions)",
+                "manage_annotations" => "Add, update, remove, or read documentation annotations for entities and associations. NOTE: Domain model-level annotations are not accessible through the API.",
                 "create_association" => "Create a new association between entities",
                 "delete_model_element" => "Delete an element from the domain model (entity, attribute, association, or enumeration)",
                 "diagnose_associations" => "Diagnose association creation issues",
@@ -575,6 +578,7 @@ namespace MCPExtension.MCP
                 "get_last_error" => "Get details about the last error",
                 "get_project_errors" => "Get project errors and consistency check information (Note: API limitation - provides workarounds and common errors)",
                 "list_available_tools" => "List all available tools",
+                "add_pages_to_navigation" => "Add pages to the responsive web navigation profile. Use this to make pages accessible through the app's main navigation menu.",
                 "debug_info" => "Get comprehensive debug information about the domain model",
                 "read_microflow_details" => "Get details about a specific microflow including activities with their positions",
                 "read_microflow_activities" => "Get comprehensive details about a microflow including all activities, input parameters, and return type. Shows activity properties, types, and positions.",
@@ -628,6 +632,171 @@ namespace MCPExtension.MCP
                         }
                     },
                     required = new[] { "module_name", "entity_name", "attributes" }
+                },
+                "modify_entity" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module containing the entity" },
+                        entity_name = new { type = "string", description = "Name of the entity to modify" },
+                        add_attributes = new 
+                        { 
+                            type = "array",
+                            description = "Attributes to add to the entity",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    name = new { type = "string", description = "Attribute name" },
+                                    type = new { type = "string", description = "Attribute type (String, Integer, Boolean, DateTime, Decimal, Long, Enumeration, etc.)" },
+                                    enumerationValues = new { type = "array", items = new { type = "string" }, description = "Required for Enumeration type" },
+                                    enumeration_name = new { type = "string", description = "Name of existing enumeration to use (alternative to enumerationValues)" }
+                                },
+                                required = new[] { "name", "type" }
+                            }
+                        },
+                        remove_attributes = new 
+                        { 
+                            type = "array",
+                            description = "Attribute names to remove",
+                            items = new { type = "string" }
+                        },
+                        rename_attributes = new 
+                        { 
+                            type = "array",
+                            description = "Attributes to rename",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    old_name = new { type = "string" },
+                                    new_name = new { type = "string" }
+                                },
+                                required = new[] { "old_name", "new_name" }
+                            }
+                        },
+                        update_attributes = new 
+                        { 
+                            type = "array",
+                            description = "Attributes to update (change type)",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    name = new { type = "string", description = "Attribute name" },
+                                    type = new { type = "string", description = "New attribute type" },
+                                    enumerationValues = new { type = "array", items = new { type = "string" }, description = "Required for Enumeration type" },
+                                    enumeration_name = new { type = "string", description = "Name of existing enumeration to use" }
+                                },
+                                required = new[] { "name", "type" }
+                            }
+                        }
+                    },
+                    required = new[] { "module_name", "entity_name" }
+                },
+                "update_entity_layout" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module containing the entities" },
+                        layout_mode = new 
+                        { 
+                            type = "string", 
+                            description = "Layout arrangement mode: 'custom' (specify positions), 'grid' (arrange in grid), 'horizontal' (arrange horizontally), 'vertical' (arrange vertically), 'circular' (arrange in circle)",
+                            @enum = new[] { "custom", "grid", "horizontal", "vertical", "circular" }
+                        },
+                        entity_positions = new
+                        {
+                            type = "array",
+                            description = "Array of entity positions (required for 'custom' mode)",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    entity_name = new { type = "string", description = "Name of the entity to position" },
+                                    x = new { type = "integer", description = "X coordinate" },
+                                    y = new { type = "integer", description = "Y coordinate" }
+                                },
+                                required = new[] { "entity_name", "x", "y" }
+                            }
+                        },
+                        columns = new { type = "integer", description = "Number of columns (for 'grid' mode, default: 5)" },
+                        spacing = new { type = "integer", description = "Spacing between entities (for 'horizontal' and 'vertical' modes)" },
+                        spacing_x = new { type = "integer", description = "Horizontal spacing (for 'grid' mode, default: 250)" },
+                        spacing_y = new { type = "integer", description = "Vertical spacing (for 'grid' mode, default: 200)" },
+                        start_x = new { type = "integer", description = "Starting X coordinate (default: 20)" },
+                        start_y = new { type = "integer", description = "Starting Y coordinate (default: 20)" },
+                        x = new { type = "integer", description = "X coordinate (for 'vertical' mode or 'horizontal' y position)" },
+                        y = new { type = "integer", description = "Y coordinate (for 'horizontal' mode or 'vertical' x position)" },
+                        radius = new { type = "integer", description = "Circle radius (for 'circular' mode, default: 300)" },
+                        center_x = new { type = "integer", description = "Circle center X (for 'circular' mode, default: 500)" },
+                        center_y = new { type = "integer", description = "Circle center Y (for 'circular' mode, default: 400)" }
+                    },
+                    required = new[] { "module_name" }
+                },
+                "manage_annotations" => new
+                {
+                    type = "object",
+                    description = "Add, update, remove, or read documentation annotations for entities and associations. NOTE: Domain model-level annotations (the annotation text box in the domain model diagram) are NOT supported by the Mendix Extensions API as they are part of the visual layer.",
+                    properties = new
+                    {
+                        module_name = new { type = "string", description = "Name of the module containing the entities/associations" },
+                        action = new 
+                        { 
+                            type = "string", 
+                            description = "Action to perform: 'set'/'update'/'add' (add/update annotations), 'remove'/'clear' (remove annotations), 'read'/'get' (read current annotations)",
+                            @enum = new[] { "set", "update", "add", "remove", "clear", "read", "get" }
+                        },
+                        entity_annotations = new
+                        {
+                            type = "array",
+                            description = "Entity annotations to set/update (for 'set', 'update', 'add' actions). These appear in Studio Pro when hovering over entities.",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    entity_name = new { type = "string", description = "Name of the entity" },
+                                    documentation = new { type = "string", description = "Documentation/annotation text" }
+                                },
+                                required = new[] { "entity_name", "documentation" }
+                            }
+                        },
+                        association_annotations = new
+                        {
+                            type = "array",
+                            description = "Association annotations to set/update (for 'set', 'update', 'add' actions). These appear in Studio Pro when hovering over associations.",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    association_name = new { type = "string", description = "Name of the association" },
+                                    documentation = new { type = "string", description = "Documentation/annotation text" }
+                                },
+                                required = new[] { "association_name", "documentation" }
+                            }
+                        },
+                        entity_names = new
+                        {
+                            type = "array",
+                            description = "Entity names to remove annotations from (for 'remove', 'clear' actions)",
+                            items = new { type = "string" }
+                        },
+                        association_names = new
+                        {
+                            type = "array",
+                            description = "Association names to remove annotations from (for 'remove', 'clear' actions)",
+                            items = new { type = "string" }
+                        }
+                    },
+                    required = new[] { "module_name" }
                 },
                 "create_association" => new
                 {
@@ -868,6 +1037,26 @@ namespace MCPExtension.MCP
                     type = "object",
                     properties = new { },
                     required = new string[0]
+                },
+                "add_pages_to_navigation" => new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        module_name = new 
+                        { 
+                            type = "string", 
+                            description = "Name of the module containing the pages to add to navigation" 
+                        },
+                        page_names = new
+                        {
+                            type = "array",
+                            description = "Array of page names to add to the navigation menu",
+                            items = new { type = "string" }
+                        }
+                    },
+                    required = new[] { "module_name", "page_names" },
+                    description = "Adds specified pages to the responsive web navigation profile, making them accessible through the app's main navigation menu."
                 },
                 "debug_info" => new
                 {

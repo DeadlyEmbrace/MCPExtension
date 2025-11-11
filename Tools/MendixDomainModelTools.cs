@@ -285,6 +285,729 @@ success = true,
             }
         }
 
+        public async Task<string> ModifyEntity(JsonObject parameters)
+        {
+            try
+            {
+                using (var transaction = _model.StartTransaction("modify entity"))
+                {
+                    var moduleName = parameters["module_name"]?.ToString();
+                    var entityName = parameters["entity_name"]?.ToString();
+
+                    if (string.IsNullOrEmpty(moduleName) || string.IsNullOrEmpty(entityName))
+                    {
+                        return JsonSerializer.Serialize(new { error = "module_name and entity_name are required" });
+                    }
+
+                    // Get module
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
+                    {
+                        return error!;
+                    }
+
+                    // Find the entity
+                    var entity = module.DomainModel.GetEntities()
+                        .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+
+                    if (entity == null)
+                    {
+                        return JsonSerializer.Serialize(new { error = $"Entity '{entityName}' not found in module '{moduleName}'" });
+                    }
+
+                    var changes = new List<string>();
+
+                    // Handle adding new attributes
+                    if (parameters.ContainsKey("add_attributes") && parameters["add_attributes"] is JsonArray addArray)
+                    {
+                        foreach (var attrNode in addArray)
+                        {
+                            var attrObj = attrNode?.AsObject();
+                            if (attrObj == null) continue;
+
+                            var attrName = attrObj["name"]?.ToString();
+                            var attrType = attrObj["type"]?.ToString();
+
+                            if (string.IsNullOrEmpty(attrName) || string.IsNullOrEmpty(attrType))
+                            {
+                                changes.Add($"⚠️ Skipped invalid attribute (missing name or type)");
+                                continue;
+                            }
+
+                            // Check if attribute already exists
+                            if (entity.GetAttributes().Any(a => a.Name.Equals(attrName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                changes.Add($"⚠️ Attribute '{attrName}' already exists, skipped");
+                                continue;
+                            }
+
+                            // Create the attribute based on type
+                            var success = CreateAttribute(entity, module, attrName, attrType, attrObj);
+                            if (success)
+                            {
+                                changes.Add($"✅ Added attribute '{attrName}' ({attrType})");
+                            }
+                            else
+                            {
+                                changes.Add($"❌ Failed to add attribute '{attrName}'");
+                            }
+                        }
+                    }
+
+                    // Handle removing attributes
+                    if (parameters.ContainsKey("remove_attributes") && parameters["remove_attributes"] is JsonArray removeArray)
+                    {
+                        foreach (var attrNode in removeArray)
+                        {
+                            var attrName = attrNode?.ToString();
+                            if (string.IsNullOrEmpty(attrName)) continue;
+
+                            var attribute = entity.GetAttributes()
+                                .FirstOrDefault(a => a.Name.Equals(attrName, StringComparison.OrdinalIgnoreCase));
+
+                            if (attribute == null)
+                            {
+                                changes.Add($"⚠️ Attribute '{attrName}' not found, skipped");
+                                continue;
+                            }
+
+                            entity.RemoveAttribute(attribute);
+                            changes.Add($"✅ Removed attribute '{attrName}'");
+                        }
+                    }
+
+                    // Handle renaming attributes
+                    if (parameters.ContainsKey("rename_attributes") && parameters["rename_attributes"] is JsonArray renameArray)
+                    {
+                        foreach (var renameNode in renameArray)
+                        {
+                            var renameObj = renameNode?.AsObject();
+                            if (renameObj == null) continue;
+
+                            var oldName = renameObj["old_name"]?.ToString();
+                            var newName = renameObj["new_name"]?.ToString();
+
+                            if (string.IsNullOrEmpty(oldName) || string.IsNullOrEmpty(newName))
+                            {
+                                changes.Add($"⚠️ Skipped invalid rename (missing old_name or new_name)");
+                                continue;
+                            }
+
+                            var attribute = entity.GetAttributes()
+                                .FirstOrDefault(a => a.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+
+                            if (attribute == null)
+                            {
+                                changes.Add($"⚠️ Attribute '{oldName}' not found, skipped rename");
+                                continue;
+                            }
+
+                            attribute.Name = newName;
+                            changes.Add($"✅ Renamed '{oldName}' to '{newName}'");
+                        }
+                    }
+
+                    // Handle updating attribute types
+                    if (parameters.ContainsKey("update_attributes") && parameters["update_attributes"] is JsonArray updateArray)
+                    {
+                        foreach (var updateNode in updateArray)
+                        {
+                            var updateObj = updateNode?.AsObject();
+                            if (updateObj == null) continue;
+
+                            var attrName = updateObj["name"]?.ToString();
+                            var newType = updateObj["type"]?.ToString();
+
+                            if (string.IsNullOrEmpty(attrName) || string.IsNullOrEmpty(newType))
+                            {
+                                changes.Add($"⚠️ Skipped invalid update (missing name or type)");
+                                continue;
+                            }
+
+                            var attribute = entity.GetAttributes()
+                                .FirstOrDefault(a => a.Name.Equals(attrName, StringComparison.OrdinalIgnoreCase));
+
+                            if (attribute == null)
+                            {
+                                changes.Add($"⚠️ Attribute '{attrName}' not found, skipped update");
+                                continue;
+                            }
+
+                            var oldType = attribute.Type?.GetType().Name ?? "Unknown";
+                            
+                            // Remove old attribute and create new one with same name but different type
+                            entity.RemoveAttribute(attribute);
+                            var success = CreateAttribute(entity, module, attrName, newType, updateObj);
+                            
+                            if (success)
+                            {
+                                changes.Add($"✅ Updated '{attrName}' from {oldType} to {newType}");
+                            }
+                            else
+                            {
+                                changes.Add($"❌ Failed to update '{attrName}' type");
+                            }
+                        }
+                    }
+
+                    if (changes.Count == 0)
+                    {
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            success = false,
+                            message = "No modifications specified. Use add_attributes, remove_attributes, rename_attributes, or update_attributes parameters."
+                        });
+                    }
+
+                    transaction.Commit();
+
+                    // Get final attribute list
+                    var finalAttributes = entity.GetAttributes().Select(a => new
+                    {
+                        name = a.Name,
+                        type = a.Type?.GetType().Name ?? "Unknown"
+                    }).ToArray();
+
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        success = true,
+                        message = $"Entity '{entityName}' modified successfully",
+                        changes = changes.ToArray(),
+                        current_attributes = finalAttributes
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error modifying entity");
+                MendixAdditionalTools.SetLastError($"Failed to modify entity: {ex.Message}", ex);
+                return JsonSerializer.Serialize(new { error = $"Failed to modify entity: {ex.Message}" });
+            }
+        }
+
+        private bool CreateAttribute(IEntity entity, IModule module, string attrName, string attrType, JsonObject attrObj)
+        {
+            try
+            {
+                var mxAttribute = _model.Create<IAttribute>();
+                mxAttribute.Name = attrName;
+
+                if (attrType.Equals("Enumeration", StringComparison.OrdinalIgnoreCase) || 
+                    attrType.Equals("Enum", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle enumeration attributes
+                    if (attrObj.ContainsKey("enumerationValues") && attrObj["enumerationValues"] is JsonArray enumValues)
+                    {
+                        var values = enumValues.Select(v => v?.ToString())
+                            .Where(v => !string.IsNullOrEmpty(v))
+                            .Cast<string>()
+                            .ToList();
+
+                        if (values.Count > 0)
+                        {
+                            var enumType = CreateEnumerationType(_model, $"{attrName}Enum", values, module);
+                            mxAttribute.Type = enumType;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else if (attrObj.ContainsKey("enumeration_name"))
+                    {
+                        var enumName = attrObj["enumeration_name"]?.ToString();
+                        var existingEnum = _model.Root.GetModuleDocuments<IEnumeration>(module)
+                            .FirstOrDefault(e => e.Name.Equals(enumName, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (existingEnum != null)
+                        {
+                            var attributeEnum = _model.Create<IEnumerationAttributeType>();
+                            attributeEnum.Enumeration = existingEnum.QualifiedName;
+                            mxAttribute.Type = attributeEnum;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    // Handle standard attribute types
+                    var attributeType = CreateAttributeType(_model, attrType);
+                    mxAttribute.Type = attributeType;
+                }
+
+                entity.AddAttribute(mxAttribute);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error creating attribute {attrName}");
+                return false;
+            }
+        }
+
+        public async Task<string> UpdateEntityLayout(JsonObject parameters)
+        {
+            try
+            {
+                using (var transaction = _model.StartTransaction("update entity layout"))
+                {
+                    var moduleName = parameters["module_name"]?.ToString();
+                    var layoutMode = parameters["layout_mode"]?.ToString()?.ToLower() ?? "custom";
+
+                    if (string.IsNullOrEmpty(moduleName))
+                    {
+                        return JsonSerializer.Serialize(new { error = "module_name is required" });
+                    }
+
+                    // Get module
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
+                    {
+                        return error!;
+                    }
+
+                    var entities = module.DomainModel.GetEntities().ToList();
+                    if (entities.Count == 0)
+                    {
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            success = false,
+                            message = $"No entities found in module '{moduleName}'"
+                        });
+                    }
+
+                    var changes = new List<string>();
+
+                    switch (layoutMode)
+                    {
+                        case "custom":
+                            // Apply custom positions for specific entities
+                            if (parameters.ContainsKey("entity_positions") && parameters["entity_positions"] is JsonArray positionsArray)
+                            {
+                                foreach (var posNode in positionsArray)
+                                {
+                                    var posObj = posNode?.AsObject();
+                                    if (posObj == null) continue;
+
+                                    var entityName = posObj["entity_name"]?.ToString();
+                                    var x = posObj["x"]?.GetValue<int>() ?? 0;
+                                    var y = posObj["y"]?.GetValue<int>() ?? 0;
+
+                                    if (string.IsNullOrEmpty(entityName)) continue;
+
+                                    var entity = entities.FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+                                    if (entity != null)
+                                    {
+                                        entity.Location = new Location(x, y);
+                                        changes.Add($"✅ Positioned '{entityName}' at ({x}, {y})");
+                                    }
+                                    else
+                                    {
+                                        changes.Add($"⚠️ Entity '{entityName}' not found");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                return JsonSerializer.Serialize(new 
+                                { 
+                                    error = "entity_positions array is required for custom layout mode",
+                                    example = new
+                                    {
+                                        module_name = "MyFirstModule",
+                                        layout_mode = "custom",
+                                        entity_positions = new[]
+                                        {
+                                            new { entity_name = "Customer", x = 100, y = 100 },
+                                            new { entity_name = "Order", x = 400, y = 100 }
+                                        }
+                                    }
+                                });
+                            }
+                            break;
+
+                        case "grid":
+                            // Arrange entities in a grid layout
+                            var columns = parameters["columns"]?.GetValue<int>() ?? 5;
+                            var spacingX = parameters["spacing_x"]?.GetValue<int>() ?? 250;
+                            var spacingY = parameters["spacing_y"]?.GetValue<int>() ?? 200;
+                            var startX = parameters["start_x"]?.GetValue<int>() ?? 20;
+                            var startY = parameters["start_y"]?.GetValue<int>() ?? 20;
+
+                            for (int i = 0; i < entities.Count; i++)
+                            {
+                                int column = i % columns;
+                                int row = i / columns;
+                                int x = startX + (column * spacingX);
+                                int y = startY + (row * spacingY);
+
+                                entities[i].Location = new Location(x, y);
+                                changes.Add($"✅ Positioned '{entities[i].Name}' at ({x}, {y})");
+                            }
+                            break;
+
+                        case "horizontal":
+                            // Arrange entities horizontally
+                            var hSpacing = parameters["spacing"]?.GetValue<int>() ?? 250;
+                            var hStartX = parameters["start_x"]?.GetValue<int>() ?? 20;
+                            var hY = parameters["y"]?.GetValue<int>() ?? 100;
+
+                            for (int i = 0; i < entities.Count; i++)
+                            {
+                                int x = hStartX + (i * hSpacing);
+                                entities[i].Location = new Location(x, hY);
+                                changes.Add($"✅ Positioned '{entities[i].Name}' at ({x}, {hY})");
+                            }
+                            break;
+
+                        case "vertical":
+                            // Arrange entities vertically
+                            var vSpacing = parameters["spacing"]?.GetValue<int>() ?? 200;
+                            var vX = parameters["x"]?.GetValue<int>() ?? 100;
+                            var vStartY = parameters["start_y"]?.GetValue<int>() ?? 20;
+
+                            for (int i = 0; i < entities.Count; i++)
+                            {
+                                int y = vStartY + (i * vSpacing);
+                                entities[i].Location = new Location(vX, y);
+                                changes.Add($"✅ Positioned '{entities[i].Name}' at ({vX}, {y})");
+                            }
+                            break;
+
+                        case "circular":
+                            // Arrange entities in a circle
+                            var radius = parameters["radius"]?.GetValue<int>() ?? 300;
+                            var centerX = parameters["center_x"]?.GetValue<int>() ?? 500;
+                            var centerY = parameters["center_y"]?.GetValue<int>() ?? 400;
+
+                            for (int i = 0; i < entities.Count; i++)
+                            {
+                                double angle = (2 * Math.PI * i) / entities.Count;
+                                int x = centerX + (int)(radius * Math.Cos(angle));
+                                int y = centerY + (int)(radius * Math.Sin(angle));
+
+                                entities[i].Location = new Location(x, y);
+                                changes.Add($"✅ Positioned '{entities[i].Name}' at ({x}, {y})");
+                            }
+                            break;
+
+                        default:
+                            return JsonSerializer.Serialize(new 
+                            { 
+                                error = $"Unknown layout_mode: {layoutMode}",
+                                supported_modes = new[] { "custom", "grid", "horizontal", "vertical", "circular" }
+                            });
+                    }
+
+                    if (changes.Count == 0)
+                    {
+                        return JsonSerializer.Serialize(new 
+                        { 
+                            success = false,
+                            message = "No layout changes were made"
+                        });
+                    }
+
+                    transaction.Commit();
+
+                    // Get final positions
+                    var finalPositions = entities.Select(e => new
+                    {
+                        entity_name = e.Name,
+                        x = e.Location.X,
+                        y = e.Location.Y
+                    }).ToArray();
+
+                    return JsonSerializer.Serialize(new 
+                    { 
+                        success = true,
+                        message = $"Layout updated successfully in module '{moduleName}'",
+                        layout_mode = layoutMode,
+                        changes = changes.ToArray(),
+                        entity_positions = finalPositions
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating entity layout");
+                MendixAdditionalTools.SetLastError($"Failed to update entity layout: {ex.Message}", ex);
+                return JsonSerializer.Serialize(new { error = $"Failed to update entity layout: {ex.Message}" });
+            }
+        }
+
+        public async Task<string> ManageAnnotations(JsonObject parameters)
+        {
+            try
+            {
+                using (var transaction = _model.StartTransaction("manage annotations"))
+                {
+                    var moduleName = parameters["module_name"]?.ToString();
+                    var action = parameters["action"]?.ToString()?.ToLower() ?? "set";
+
+                    if (string.IsNullOrEmpty(moduleName))
+                    {
+                        return JsonSerializer.Serialize(new { error = "module_name is required" });
+                    }
+
+                    // Get module
+                    var (module, error) = GetModuleByName(moduleName);
+                    if (module == null)
+                    {
+                        return error!;
+                    }
+
+                    var changes = new List<string>();
+                    var warnings = new List<string>();
+
+                    // Check if domain model documentation is requested
+                    // NOTE: Mendix Extensions API doesn't expose IDomainModel.Documentation property
+                    // The annotation text box visible in Studio Pro's domain model diagram is part of the visual layer
+                    // and cannot be accessed or modified through the Extensions API
+                    if (parameters.ContainsKey("domain_model_documentation") || parameters.ContainsKey("domain_model_annotation"))
+                    {
+                        warnings.Add("⚠️ Domain model-level annotations are not supported by the Mendix Extensions API. " +
+                                   "The annotation text box in the domain model diagram is part of the visual layer and cannot be accessed programmatically. " +
+                                   "You can only manage annotations for entities and associations.");
+                    }
+
+                    switch (action)
+                    {
+                        case "set":
+                        case "update":
+                        case "add":
+                            // Set or update annotations
+                            if (parameters.ContainsKey("entity_annotations") && parameters["entity_annotations"] is JsonArray entityArray)
+                            {
+                                foreach (var annotNode in entityArray)
+                                {
+                                    var annotObj = annotNode?.AsObject();
+                                    if (annotObj == null) continue;
+
+                                    var entityName = annotObj["entity_name"]?.ToString();
+                                    var documentation = annotObj["documentation"]?.ToString();
+
+                                    if (string.IsNullOrEmpty(entityName)) continue;
+
+                                    var entity = module.DomainModel.GetEntities()
+                                        .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (entity != null && documentation != null)
+                                    {
+                                        entity.Documentation = documentation;
+                                        changes.Add($"✅ Updated annotation for entity '{entityName}'");
+                                    }
+                                    else if (entity == null)
+                                    {
+                                        changes.Add($"⚠️ Entity '{entityName}' not found");
+                                    }
+                                }
+                            }
+
+                            if (parameters.ContainsKey("association_annotations") && parameters["association_annotations"] is JsonArray assocArray)
+                            {
+                                foreach (var annotNode in assocArray)
+                                {
+                                    var annotObj = annotNode?.AsObject();
+                                    if (annotObj == null) continue;
+
+                                    var associationName = annotObj["association_name"]?.ToString();
+                                    var documentation = annotObj["documentation"]?.ToString();
+
+                                    if (string.IsNullOrEmpty(associationName)) continue;
+
+                                    // Find association by name in the domain model
+                                    var allAssociations = module.DomainModel.GetEntities()
+                                        .SelectMany(e => e.GetAssociations(AssociationDirection.Both, null)
+                                            .Select(ea => ea.Association))
+                                        .Distinct()
+                                        .ToList();
+
+                                    var association = allAssociations
+                                        .FirstOrDefault(a => a.Name.Equals(associationName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (association != null && documentation != null)
+                                    {
+                                        association.Documentation = documentation;
+                                        changes.Add($"✅ Updated annotation for association '{associationName}'");
+                                    }
+                                    else if (association == null)
+                                    {
+                                        changes.Add($"⚠️ Association '{associationName}' not found");
+                                    }
+                                }
+                            }
+
+                            if (changes.Count == 0)
+                            {
+                                return JsonSerializer.Serialize(new 
+                                { 
+                                    error = "No annotations specified. Use entity_annotations or association_annotations parameters.",
+                                    example = new
+                                    {
+                                        module_name = "MyFirstModule",
+                                        action = "set",
+                                        entity_annotations = new[]
+                                        {
+                                            new { entity_name = "Customer", documentation = "Represents a customer entity" }
+                                        },
+                                        association_annotations = new[]
+                                        {
+                                            new { association_name = "Customer_Order", documentation = "Links customers to their orders" }
+                                        }
+                                    }
+                                });
+                            }
+                            break;
+
+                        case "remove":
+                        case "clear":
+                            // Remove annotations (set to empty string)
+                            if (parameters.ContainsKey("entity_names") && parameters["entity_names"] is JsonArray entityNamesArray)
+                            {
+                                foreach (var nameNode in entityNamesArray)
+                                {
+                                    var entityName = nameNode?.ToString();
+                                    if (string.IsNullOrEmpty(entityName)) continue;
+
+                                    var entity = module.DomainModel.GetEntities()
+                                        .FirstOrDefault(e => e.Name.Equals(entityName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (entity != null)
+                                    {
+                                        entity.Documentation = string.Empty;
+                                        changes.Add($"✅ Removed annotation from entity '{entityName}'");
+                                    }
+                                    else
+                                    {
+                                        changes.Add($"⚠️ Entity '{entityName}' not found");
+                                    }
+                                }
+                            }
+
+                            if (parameters.ContainsKey("association_names") && parameters["association_names"] is JsonArray assocNamesArray)
+                            {
+                                foreach (var nameNode in assocNamesArray)
+                                {
+                                    var associationName = nameNode?.ToString();
+                                    if (string.IsNullOrEmpty(associationName)) continue;
+
+                                    var allAssociations = module.DomainModel.GetEntities()
+                                        .SelectMany(e => e.GetAssociations(AssociationDirection.Both, null)
+                                            .Select(ea => ea.Association))
+                                        .Distinct()
+                                        .ToList();
+
+                                    var association = allAssociations
+                                        .FirstOrDefault(a => a.Name.Equals(associationName, StringComparison.OrdinalIgnoreCase));
+
+                                    if (association != null)
+                                    {
+                                        association.Documentation = string.Empty;
+                                        changes.Add($"✅ Removed annotation from association '{associationName}'");
+                                    }
+                                    else
+                                    {
+                                        changes.Add($"⚠️ Association '{associationName}' not found");
+                                    }
+                                }
+                            }
+
+                            if (changes.Count == 0)
+                            {
+                                return JsonSerializer.Serialize(new 
+                                { 
+                                    error = "No entities or associations specified for removal. Use entity_names or association_names parameters."
+                                });
+                            }
+                            break;
+
+                        case "read":
+                        case "get":
+                            // Read current annotations
+                            var entityAnnotations = module.DomainModel.GetEntities()
+                                .Select(e => new
+                                {
+                                    entity_name = e.Name,
+                                    documentation = e.Documentation ?? string.Empty,
+                                    has_annotation = !string.IsNullOrWhiteSpace(e.Documentation)
+                                })
+                                .ToList();
+
+                            var allAssocs = module.DomainModel.GetEntities()
+                                .SelectMany(e => e.GetAssociations(AssociationDirection.Both, null)
+                                    .Select(ea => ea.Association))
+                                .Distinct()
+                                .ToList();
+
+                            var associationAnnotations = allAssocs
+                                .Select(a => new
+                                {
+                                    association_name = a.Name,
+                                    documentation = a.Documentation ?? string.Empty,
+                                    has_annotation = !string.IsNullOrWhiteSpace(a.Documentation)
+                                })
+                                .ToList();
+
+                            return JsonSerializer.Serialize(new 
+                            { 
+                                success = true,
+                                module_name = moduleName,
+                                entity_annotations = entityAnnotations,
+                                association_annotations = associationAnnotations,
+                                summary = new
+                                {
+                                    total_entities = entityAnnotations.Count,
+                                    entities_with_annotations = entityAnnotations.Count(e => e.has_annotation),
+                                    total_associations = associationAnnotations.Count,
+                                    associations_with_annotations = associationAnnotations.Count(a => a.has_annotation)
+                                },
+                                warnings = warnings.Count > 0 ? warnings.ToArray() : null,
+                                note = "Domain model-level documentation is not accessible through the Mendix Extensions API"
+                            });
+
+                        default:
+                            return JsonSerializer.Serialize(new 
+                            { 
+                                error = $"Unknown action: {action}",
+                                supported_actions = new[] { "set", "update", "add", "remove", "clear", "read", "get" }
+                            });
+                    }
+
+                    transaction.Commit();
+
+                    var result = new Dictionary<string, object>
+                    {
+                        ["success"] = true,
+                        ["message"] = $"Annotations {action} completed successfully",
+                        ["module_name"] = moduleName,
+                        ["action"] = action,
+                        ["changes"] = changes.ToArray()
+                    };
+
+                    if (warnings.Count > 0)
+                    {
+                        result["warnings"] = warnings.ToArray();
+                    }
+
+                    return JsonSerializer.Serialize(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error managing annotations");
+                MendixAdditionalTools.SetLastError($"Failed to manage annotations: {ex.Message}", ex);
+                return JsonSerializer.Serialize(new { error = $"Failed to manage annotations: {ex.Message}" });
+            }
+        }
+
         public async Task<string> CreateAssociation(JsonObject parameters)
         {
      try

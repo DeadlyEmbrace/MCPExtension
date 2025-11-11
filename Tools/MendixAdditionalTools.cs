@@ -13,6 +13,7 @@ using Mendix.StudioPro.ExtensionsAPI.Model.Microflows.Actions;
 using Mendix.StudioPro.ExtensionsAPI.Model.MicroflowExpressions;
 using Mendix.StudioPro.ExtensionsAPI.Model.DomainModels;
 using Mendix.StudioPro.ExtensionsAPI.Model.Enumerations;
+using Mendix.StudioPro.ExtensionsAPI.Model.Pages;
 using Mendix.StudioPro.ExtensionsAPI.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -785,6 +786,9 @@ namespace MCPExtension.Tools
                 {
                     "read_domain_model",
                     "create_entity",
+                    "modify_entity",
+                    "update_entity_layout",
+                    "manage_annotations",
                     "create_association",
                     "delete_model_element",
                     "diagnose_associations",
@@ -806,7 +810,8 @@ namespace MCPExtension.Tools
                     "add_change_object_activity",
                     "create_microflow",
                     "create_microflow_activity",
-                    "create_microflow_activities_sequence"
+                    "create_microflow_activities_sequence",
+                    "add_pages_to_navigation"
                 };
 
                 return JsonSerializer.Serialize(new { available_tools = tools });
@@ -815,6 +820,147 @@ namespace MCPExtension.Tools
             {
                 _logger.LogError(ex, "Error listing available tools");
                 return JsonSerializer.Serialize(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Adds pages to the responsive web navigation profile
+        /// </summary>
+        public async Task<object> AddPagesToNavigation(JsonObject arguments)
+        {
+            try
+            {
+                if (_model == null)
+                {
+                    var error = "IModel instance is null in AddPagesToNavigation.";
+                    _logger.LogError(error);
+                    SetLastError(error);
+                    return JsonSerializer.Serialize(new { error, success = false });
+                }
+
+                // Get parameters
+                var moduleName = arguments["module_name"]?.ToString();
+                var pageNamesArray = arguments["page_names"]?.AsArray();
+
+                if (string.IsNullOrWhiteSpace(moduleName))
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "Module name is required",
+                        success = false,
+                        example = new
+                        {
+                            module_name = "MyFirstModule",
+                            page_names = new[] { "Customer_Overview", "Order_Overview" }
+                        }
+                    });
+                }
+
+                if (pageNamesArray == null || !pageNamesArray.Any())
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "Page names array is required",
+                        success = false,
+                        example = new
+                        {
+                            module_name = "MyFirstModule",
+                            page_names = new[] { "Customer_Overview", "Order_Overview" }
+                        }
+                    });
+                }
+
+                var pageNames = pageNamesArray
+                    .Select(node => node?.ToString())
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .ToList();
+
+                if (!pageNames.Any())
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "No valid page names provided",
+                        success = false
+                    });
+                }
+
+                // Get module
+                var (module, moduleError) = GetModuleByName(moduleName);
+                if (module == null)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = moduleError,
+                        success = false
+                    });
+                }
+
+                // Find the pages in the module
+                var allPages = module.GetDocuments()
+                    .OfType<IPage>()
+                    .ToList();
+
+                if (!allPages.Any())
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = $"No pages found in module '{moduleName}'",
+                        success = false,
+                        hint = "Create pages first using generate_overview_pages or manually in Studio Pro"
+                    });
+                }
+
+                // Filter pages based on requested names
+                var pagesToAdd = allPages
+                    .Where(p => pageNames.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+                    .Select(p => (p.Name, p))
+                    .ToArray();
+
+                if (!pagesToAdd.Any())
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        error = "None of the requested pages were found in the module",
+                        success = false,
+                        requested_pages = pageNames.ToArray(),
+                        available_pages = allPages.Select(p => p.Name).ToArray(),
+                        hint = "Page names are case-insensitive but must match exactly"
+                    });
+                }
+
+                // Check for pages that weren't found
+                var foundPageNames = pagesToAdd.Select(p => p.Name).ToList();
+                var notFoundPages = pageNames
+                    .Where(name => !foundPageNames.Any(fpn => fpn.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                // Add pages to navigation using the service
+                _navigationManagerService.PopulateWebNavigationWith(
+                    _model,
+                    pagesToAdd
+                );
+
+                var result = new
+                {
+                    success = true,
+                    message = $"Successfully added {pagesToAdd.Length} page(s) to navigation",
+                    module = module.Name,
+                    added_pages = pagesToAdd.Select(p => p.Name).ToArray(),
+                    not_found = notFoundPages.Any() ? notFoundPages.ToArray() : null
+                };
+
+                return JsonSerializer.Serialize(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding pages to navigation");
+                SetLastError("Error adding pages to navigation", ex);
+                return JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    success = false,
+                    stack_trace = ex.StackTrace
+                });
             }
         }
 

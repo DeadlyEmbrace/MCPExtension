@@ -89,6 +89,21 @@ namespace MCPExtension
                 var result = await domainModelTools.CreateEntity(parameters);
                 return (object)result;
             });
+            _mcpServer.RegisterTool("modify_entity", async (JsonObject parameters) => 
+            {
+                var result = await domainModelTools.ModifyEntity(parameters);
+                return (object)result;
+            });
+            _mcpServer.RegisterTool("update_entity_layout", async (JsonObject parameters) => 
+            {
+                var result = await domainModelTools.UpdateEntityLayout(parameters);
+                return (object)result;
+            });
+            _mcpServer.RegisterTool("manage_annotations", async (JsonObject parameters) => 
+            {
+                var result = await domainModelTools.ManageAnnotations(parameters);
+                return (object)result;
+            });
             _mcpServer.RegisterTool("create_association", async (JsonObject parameters) => 
             {
                 var result = await domainModelTools.CreateAssociation(parameters);
@@ -159,6 +174,11 @@ namespace MCPExtension
             _mcpServer.RegisterTool("list_available_tools", async (JsonObject parameters) => 
             {
                 var result = await additionalTools.ListAvailableTools(parameters);
+                return (object)result;
+            });
+            _mcpServer.RegisterTool("add_pages_to_navigation", async (JsonObject parameters) => 
+            {
+                var result = await additionalTools.AddPagesToNavigation(parameters);
                 return (object)result;
             });
             _mcpServer.RegisterTool("debug_info", async (JsonObject parameters) => 
@@ -245,7 +265,7 @@ namespace MCPExtension
             {
                 isRunning = _isRunning && _serverTask != null && !_serverTask.IsCompleted,
                 serverTaskStatus = _serverTask?.Status.ToString() ?? "Not Started",
-                registeredTools = 19, // Updated number of registered tools (added list_modules, list_enumerations, get_project_errors)
+                registeredTools = 22, // Updated number of registered tools (added list_modules, list_enumerations, get_project_errors, modify_entity, update_entity_layout, manage_annotations)
                 port = _port,
                 sseEndpoint = $"http://localhost:{_port}/sse",
                 healthEndpoint = $"http://localhost:{_port}/health",

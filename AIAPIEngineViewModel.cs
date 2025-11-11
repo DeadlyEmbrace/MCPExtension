@@ -38,234 +38,405 @@ namespace MCPExtension
             <meta charset=""UTF-8"">
             <title>MCP Server</title>
             <style>
-                /* Common Base Styles */
+                /* Light Theme (Default) */
+                :root[data-theme=""light""] {
+                    --bg-primary: #f5f7fa;
+                    --bg-secondary: #ffffff;
+                    --bg-tertiary: #e8edf2;
+                    --text-primary: #1a202c;
+                    --text-secondary: #4a5568;
+                    --text-tertiary: #718096;
+                    --border-color: #e2e8f0;
+                    --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+                    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    --primary: #3b82f6;
+                    --primary-hover: #2563eb;
+                    --success: #10b981;
+                    --success-glow: rgba(16, 185, 129, 0.2);
+                    --danger: #ef4444;
+                    --danger-hover: #dc2626;
+                    --danger-glow: rgba(239, 68, 68, 0.2);
+                    --warning: #f59e0b;
+                    --status-bg: #f0f9ff;
+                }
+
+                /* Dark Theme */
+                :root[data-theme=""dark""] {
+                    --bg-primary: #0f172a;
+                    --bg-secondary: #1e293b;
+                    --bg-tertiary: #334155;
+                    --text-primary: #f1f5f9;
+                    --text-secondary: #cbd5e1;
+                    --text-tertiary: #94a3b8;
+                    --border-color: #334155;
+                    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+                    --primary: #60a5fa;
+                    --primary-hover: #3b82f6;
+                    --success: #34d399;
+                    --success-glow: rgba(52, 211, 153, 0.3);
+                    --danger: #f87171;
+                    --danger-hover: #ef4444;
+                    --danger-glow: rgba(248, 113, 113, 0.3);
+                    --warning: #fbbf24;
+                    --status-bg: #1e3a5f;
+                }
+
+                /* Auto-detect system preference */
                 :root {
-                    /* Color palette */
-                    --primary-color: #007bff;
-                    --success-color: #28a745;
-                    --danger-color: #dc3545;
-                    --background-color: #f8f9fa;
-                    --border-color: #ddd;
-                    --text-primary: #2c3e50;
-                    --text-secondary: #6c757d;
-                    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-                    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    
-                    /* Spacing */
-                    --spacing-sm: 8px;
-                    --spacing-md: 16px;
-                    --spacing-lg: 24px;
-    
-                    /* Border radius */
-                    --border-radius-sm: 6px;
-                    --border-radius-md: 8px;
+                    --bg-primary: #f5f7fa;
+                    --bg-secondary: #ffffff;
+                    --bg-tertiary: #e8edf2;
+                    --text-primary: #1a202c;
+                    --text-secondary: #4a5568;
+                    --text-tertiary: #718096;
+                    --border-color: #e2e8f0;
+                    --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+                    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    --primary: #3b82f6;
+                    --primary-hover: #2563eb;
+                    --success: #10b981;
+                    --success-glow: rgba(16, 185, 129, 0.2);
+                    --danger: #ef4444;
+                    --danger-hover: #dc2626;
+                    --danger-glow: rgba(239, 68, 68, 0.2);
+                    --warning: #f59e0b;
+                    --status-bg: #f0f9ff;
                 }
 
-                /* Base Layout */
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                @media (prefers-color-scheme: dark) {
+                    :root:not([data-theme=""light""]) {
+                        --bg-primary: #0f172a;
+                        --bg-secondary: #1e293b;
+                        --bg-tertiary: #334155;
+                        --text-primary: #f1f5f9;
+                        --text-secondary: #cbd5e1;
+                        --text-tertiary: #94a3b8;
+                        --border-color: #334155;
+                        --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+                        --primary: #60a5fa;
+                        --primary-hover: #3b82f6;
+                        --success: #34d399;
+                        --success-glow: rgba(52, 211, 153, 0.3);
+                        --danger: #f87171;
+                        --danger-hover: #ef4444;
+                        --danger-glow: rgba(248, 113, 113, 0.3);
+                        --warning: #fbbf24;
+                        --status-bg: #1e3a5f;
+                    }
+                }
+
+                * {
                     margin: 0;
-                    padding: var(--spacing-lg);
-                    background-color: var(--background-color);
-                    color: var(--text-primary);
+                    padding: 0;
+                    box-sizing: border-box;
                 }
 
-                /* Common Components */
-                .panel {
-                    background: white;
-                    border-radius: var(--border-radius-md);
-                    padding: var(--spacing-lg);
-                    box-shadow: var(--shadow-sm);
-                    margin-bottom: var(--spacing-lg);
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+                    background: var(--bg-primary);
+                    color: var(--text-primary);
+                    padding: 32px;
+                    min-height: 100vh;
+                    transition: background-color 0.3s ease, color 0.3s ease;
                 }
 
-                /* Headers */
-                h1 {
-                    color: var(--text-primary);
-                    font-size: 24px;
-                    margin-bottom: var(--spacing-lg);
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+
+                .header {
                     display: flex;
                     align-items: center;
-                    gap: var(--spacing-md);
+                    justify-content: space-between;
+                    margin-bottom: 32px;
                 }
 
-                /* Buttons */
-                button {
-                    padding: var(--spacing-sm) var(--spacing-lg);
-                    border: none;
-                    border-radius: var(--border-radius-md);
+                .title-section {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                h1 {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    letter-spacing: -0.5px;
+                }
+
+                .subtitle {
+                    font-size: 14px;
+                    color: var(--text-tertiary);
+                    font-weight: 500;
+                }
+
+                .theme-toggle {
+                    background: var(--bg-secondary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 12px;
+                    padding: 8px 12px;
                     cursor: pointer;
-                    font-size: 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--text-secondary);
                     transition: all 0.2s ease;
-                    background-color: var(--primary-color);
-                    color: white;
+                    font-size: 14px;
+                    font-weight: 500;
                 }
 
-                button:hover {
+                .theme-toggle:hover {
+                    background: var(--bg-tertiary);
                     transform: translateY(-1px);
-                    box-shadow: var(--shadow-sm);
                 }
 
-                button:disabled {
-                    background-color: var(--text-secondary);
-                    cursor: not-allowed;
-                    transform: none;
+                .status-card {
+                    background: var(--bg-secondary);
+                    border-radius: 16px;
+                    padding: 32px;
+                    box-shadow: var(--shadow);
+                    border: 1px solid var(--border-color);
+                    margin-bottom: 24px;
+                    transition: all 0.3s ease;
                 }
 
-                /* Status Indicators */
+                .status-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    margin-bottom: 24px;
+                    padding: 20px;
+                    background: var(--status-bg);
+                    border-radius: 12px;
+                    border: 1px solid var(--border-color);
+                }
+
                 .status-indicator {
-                    width: 12px;
-                    height: 12px;
+                    width: 16px;
+                    height: 16px;
                     border-radius: 50%;
-                    display: inline-block;
+                    transition: all 0.3s ease;
+                    position: relative;
+                }
+
+                .status-indicator::before {
+                    content: '';
+                    position: absolute;
+                    inset: -4px;
+                    border-radius: 50%;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
                 }
 
                 .status-running {
-                    background-color: var(--success-color);
-                    box-shadow: 0 0 8px var(--success-color);
+                    background: var(--success);
+                    animation: pulse 2s ease-in-out infinite;
+                }
+
+                .status-running::before {
+                    background: var(--success-glow);
+                    opacity: 1;
+                    animation: pulse-ring 2s ease-in-out infinite;
                 }
 
                 .status-stopped {
-                    background-color: var(--danger-color);
-                    box-shadow: 0 0 8px var(--danger-color);
+                    background: var(--danger);
                 }
 
-                /* Tree View Specific */
-                .tree-view {
-                    background: white;
-                    border-radius: var(--border-radius-md);
-                    padding: var(--spacing-lg);
-                    box-shadow: var(--shadow-sm);
+                .status-stopped::before {
+                    background: var(--danger-glow);
+                    opacity: 0.5;
                 }
 
-                .module-header, .entity-header {
-                    padding: var(--spacing-md);
-                    cursor: pointer;
-                    border-radius: var(--border-radius-md);
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.8; }
+                }
+
+                @keyframes pulse-ring {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.5); opacity: 0.4; }
+                    100% { transform: scale(1); opacity: 0.8; }
+                }
+
+                .status-label {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .status-value {
+                    font-size: 16px;
+                    color: var(--text-secondary);
+                    margin-left: auto;
+                    font-weight: 500;
+                }
+
+                .button-group {
                     display: flex;
-                    align-items: center;
-                    margin-bottom: var(--spacing-sm);
+                    gap: 12px;
+                    margin-bottom: 20px;
                 }
 
-                .module-header {
-                    background-color: #e3e8ef;
-                    border: 1px solid #d1d9e6;
+                button {
+                    flex: 1;
+                    padding: 14px 24px;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: var(--shadow);
+                    position: relative;
+                    overflow: hidden;
                 }
 
-                .entity-header {
-                    background-color: var(--background-color);
-                    border: 1px solid var(--border-color);
+                button::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
                 }
 
-                /* Chat Panel Specific */
-                #chatDisplay, #chatInput {
-                    width: 100%;
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--border-radius-md);
-                    background-color: white;
-                    box-shadow: var(--shadow-sm);
+                button:hover::before {
+                    opacity: 1;
                 }
 
-                #chatDisplay {
-                    height: 300px;
-                    padding: var(--spacing-md);
-                    margin-bottom: var(--spacing-md);
-                    overflow-y: auto;
+                #startButton {
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+                    color: white;
                 }
 
-                #chatInput {
-                    height: 100px;
-                    padding: var(--spacing-md);
-                    resize: vertical;
-                    font-family: inherit;
-                }
-
-                /* Modal Styles */
-                .modal {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background-color: rgba(0, 0, 0, 0.5);
-                    display: none;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                    backdrop-filter: blur(2px);
-                }
-
-                .modal-content {
-                    background-color: white;
-                    padding: var(--spacing-lg);
-                    border-radius: var(--border-radius-md);
-                    width: 300px;
-                    box-shadow: var(--shadow-md);
-                }
-
-                /* Form Elements */
-                input {
-                    width: 100%;
-                    padding: var(--spacing-sm);
-                    border: 1px solid var(--border-color);
-                    border-radius: var(--border-radius-md);
-                    margin-bottom: var(--spacing-md);
-                }
-
-                input:focus {
-                    outline: none;
-                    border-color: var(--primary-color);
-                    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-                }
-
-                /* Engine Panel Specific */
-                .control-panel {
-                    background: white;
-                    border-radius: var(--border-radius-md);
-                    padding: var(--spacing-lg);
-                    box-shadow: var(--shadow-sm);
-                    margin-bottom: var(--spacing-lg);
+                #startButton:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: var(--shadow-lg);
                 }
 
                 #stopButton {
-                    background-color: var(--danger-color);
+                    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-hover) 100%);
+                    color: white;
                 }
 
-                .status-text {
+                #stopButton:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: var(--shadow-lg);
+                }
+
+                button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    transform: none !important;
+                }
+
+                #status {
+                    padding: 16px;
+                    border-radius: 10px;
                     font-size: 14px;
-                    margin-left: var(--spacing-md);
-                    color: var(--text-secondary);
+                    font-weight: 500;
+                    display: none;
+                    margin-top: 16px;
+                    animation: slideIn 0.3s ease;
                 }
 
-                /* Status message styles */
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
                 .success {
-                    color: #28a745;
-                    font-weight: 500;
+                    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+                    color: var(--success);
+                    border: 1px solid var(--success);
                 }
 
                 .error {
-                    color: #dc3545;
-                    font-weight: 500;
+                    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+                    color: var(--danger);
+                    border: 1px solid var(--danger);
                 }
 
                 .info {
-                    color: #17a2b8;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+                    color: var(--primary);
+                    border: 1px solid var(--primary);
+                }
+
+                .info-section {
+                    background: var(--bg-tertiary);
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 24px;
+                }
+
+                .info-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    margin-bottom: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .info-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                    padding: 8px 0;
+                    border-bottom: 1px solid var(--border-color);
+                }
+
+                .info-item:last-child {
+                    border-bottom: none;
+                }
+
+                .info-item-label {
                     font-weight: 500;
+                    min-width: 100px;
+                }
+
+                .info-item-value {
+                    font-family: 'Courier New', monospace;
+                    color: var(--primary);
+                }
+
+                /* Icon styles */
+                .icon {
+                    width: 20px;
+                    height: 20px;
+                    display: inline-block;
                 }
             </style>
 
             <script>
                 function handleMessageFromHost(event) {
-                    const data = event.data;
+                    console.log('=== handleMessageFromHost called ===');
+                    const eventData = event.data;
                     console.log('Received event:', event);
-                    console.log('Event data:', data);
-                    console.log('Data type:', typeof data);
-                    console.log('Data message:', data.message);
+                    console.log('Event data:', eventData);
+                    console.log('Data type:', typeof eventData);
                     
-                    if (data.message === 'Running') {
-                        console.log('Handling Running message');
+                    // According to Mendix API docs event.data should have message and data properties
+                    const message = eventData.message || eventData;
+                    console.log('Extracted message:', message);
+                    
+                    if (message === 'Running') {
+                        console.log('✓ Handling Running message');
                         const indicator = document.getElementById('statusIndicator');
-                        const statusText = document.getElementById('statusText');
+                        const statusText = document.getElementById('statusValue');
                         const startButton = document.getElementById('startButton');
                         const stopButton = document.getElementById('stopButton');
             
@@ -275,13 +446,15 @@ namespace MCPExtension
                         stopButton.disabled = false;
             
                         const statusDiv = document.getElementById('status');
-                        statusDiv.textContent = 'MCP Server started successfully';
+                        statusDiv.textContent = '✓ MCP Server started successfully';
                         statusDiv.className = 'success';
+                        statusDiv.style.display = 'block';
+                        console.log('✓ UI updated for Running state');
                     } 
-                    else if (data.message === 'NotRunning') {
-                        console.log('Handling NotRunning message');
+                    else if (message === 'NotRunning') {
+                        console.log('✓ Handling NotRunning message');
                         const indicator = document.getElementById('statusIndicator');
-                        const statusText = document.getElementById('statusText');
+                        const statusText = document.getElementById('statusValue');
                         const startButton = document.getElementById('startButton');
                         const stopButton = document.getElementById('stopButton');
             
@@ -291,17 +464,38 @@ namespace MCPExtension
                         stopButton.disabled = true;
             
                         const statusDiv = document.getElementById('status');
-                        statusDiv.textContent = 'MCP Server stopped successfully';
+                        statusDiv.textContent = '✓ MCP Server stopped';
                         statusDiv.className = 'success';
+                        statusDiv.style.display = 'block';
+                        console.log('✓ UI updated for NotRunning state');
+                    }
+                    else if (message === 'Error') {
+                        console.log('✓ Handling Error message');
+                        const indicator = document.getElementById('statusIndicator');
+                        const statusText = document.getElementById('statusValue');
+                        const startButton = document.getElementById('startButton');
+                        const stopButton = document.getElementById('stopButton');
+            
+                        indicator.className = 'status-indicator status-stopped';
+                        statusText.textContent = 'Stopped';
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+            
+                        const statusDiv = document.getElementById('status');
+                        statusDiv.textContent = '⚠ Failed to start MCP Server. Port may be in use. Try stopping any existing server first.';
+                        statusDiv.className = 'error';
+                        statusDiv.style.display = 'block';
+                        console.log('✓ UI updated for Error state');
                     }
                     else {
-                        console.log('No matching message handler for:', data.message);
+                        console.warn('⚠️ No matching message handler for:', message);
+                        console.log('Full event data:', JSON.stringify(eventData));
                     }
                 }
 
                 function updateServerStatus(status) {
                     const indicator = document.getElementById('statusIndicator');
-                    const statusText = document.getElementById('statusText');
+                    const statusText = document.getElementById('statusValue');
                     const startButton = document.getElementById('startButton');
                     const stopButton = document.getElementById('stopButton');
         
@@ -312,13 +506,13 @@ namespace MCPExtension
                         stopButton.disabled = false;
                     } else if (status === 'starting') {
                         indicator.className = 'status-indicator';
-                        indicator.style.backgroundColor = '#ffc107'; // warning/orange color
+                        indicator.style.backgroundColor = '#ffc107';
                         statusText.textContent = 'Starting...';
                         startButton.disabled = true;
                         stopButton.disabled = true;
                     } else if (status === 'stopping') {
                         indicator.className = 'status-indicator';
-                        indicator.style.backgroundColor = '#ffc107'; // warning/orange color
+                        indicator.style.backgroundColor = '#ffc107';
                         statusText.textContent = 'Stopping...';
                         startButton.disabled = true;
                         stopButton.disabled = true;
@@ -330,35 +524,121 @@ namespace MCPExtension
                     }
                 }
 
+                function toggleTheme() {
+                    const root = document.documentElement;
+                    const currentTheme = root.getAttribute('data-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    root.setAttribute('data-theme', newTheme);
+                    
+                    // Save preference (wrapped in try-catch for data: URLs)
+                    try {
+                        localStorage.setItem('theme', newTheme);
+                    } catch (e) {
+                        console.warn('localStorage not available:', e.message);
+                    }
+                    
+                    // Update button text
+                    const btn = document.getElementById('themeToggle');
+                    btn.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+                }
+
                 function init() {
+                    console.log('init() called');
+                    
+                    // Load saved theme preference or use system preference
+                    try {
+                        const savedTheme = localStorage.getItem('theme');
+                        if (savedTheme) {
+                            document.documentElement.setAttribute('data-theme', savedTheme);
+                            const btn = document.getElementById('themeToggle');
+                            btn.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+                        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                            document.documentElement.setAttribute('data-theme', 'dark');
+                            const btn = document.getElementById('themeToggle');
+                            btn.textContent = '☀️ Light Mode';
+                        }
+                    } catch (e) {
+                        console.warn('localStorage not available, using default theme:', e.message);
+                        // Use system preference as fallback
+                        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                            document.documentElement.setAttribute('data-theme', 'dark');
+                            const btn = document.getElementById('themeToggle');
+                            btn.textContent = '☀️ Light Mode';
+                        }
+                    }
+                    
+                    console.log('About to register message listener');
                     window.chrome.webview.addEventListener('message', handleMessageFromHost);
+                    console.log('Sending MessageListenerRegistered');
                     chrome.webview.postMessage({ message: 'MessageListenerRegistered' });
+                    console.log('init() completed');
                 }
 
                 function startEngine() {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.textContent = 'Starting MCP Server...';
+                    statusDiv.className = 'info';
+                    statusDiv.style.display = 'block';
                     chrome.webview.postMessage({ message: 'startEngine' });
                 }
 
                 function stopEngine() {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.textContent = 'Stopping MCP Server...';
+                    statusDiv.className = 'info';
+                    statusDiv.style.display = 'block';
                     chrome.webview.postMessage({ message: 'stopEngine' });
                 }
             </script>
-
-
-
-
         </head>
         <body onload=""init()"">
-            <h1>
-                MCP Server (HTTP/SSE)
-                <span id=""statusIndicator"" class=""status-indicator status-stopped""></span>
-                <span id=""statusText"" class=""status-text"">Stopped</span>
-            </h1>
-            <div class=""control-panel"">
-                <button id=""startButton"" onclick=""startEngine()"">Start MCP Server</button>
-                <button id=""stopButton"" onclick=""stopEngine()"" style=""background-color: #dc3545;"" disabled>Stop MCP Server</button>
-                <div id=""status""></div>
-                <div id=""connectionInfo"" style=""margin-top: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; font-family: monospace; font-size: 12px; white-space: pre-line; display: none;""></div>
+            <div class=""container"">
+                <div class=""header"">
+                    <div class=""title-section"">
+                        <div>
+                            <h1>MCP Server</h1>
+                            <div class=""subtitle"">Model Context Protocol Server (HTTP/SSE)</div>
+                        </div>
+                    </div>
+                    <button class=""theme-toggle"" id=""themeToggle"" onclick=""toggleTheme()"">
+                        🌙 Dark Mode
+                    </button>
+                </div>
+
+                <div class=""status-card"">
+                    <div class=""status-row"">
+                        <span id=""statusIndicator"" class=""status-indicator status-stopped""></span>
+                        <span class=""status-label"">Server Status</span>
+                        <span id=""statusValue"" class=""status-value"">Stopped</span>
+                    </div>
+
+                    <div class=""button-group"">
+                        <button id=""startButton"" onclick=""startEngine()"">
+                            ▶ Start Server
+                        </button>
+                        <button id=""stopButton"" onclick=""stopEngine()"" disabled>
+                            ⏹ Stop Server
+                        </button>
+                    </div>
+
+                    <div id=""status""></div>
+
+                    <div class=""info-section"">
+                        <div class=""info-title"">Server Information</div>
+                        <div class=""info-item"">
+                            <span class=""info-item-label"">Protocol</span>
+                            <span class=""info-item-value"">HTTP/SSE</span>
+                        </div>
+                        <div class=""info-item"">
+                            <span class=""info-item-label"">Port</span>
+                            <span class=""info-item-value"">3001</span>
+                        </div>
+                        <div class=""info-item"">
+                            <span class=""info-item-label"">Endpoint</span>
+                            <span class=""info-item-value"">http://localhost:3001</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </body>
         </html>";
@@ -413,7 +693,7 @@ namespace MCPExtension
                     
                     var messageToSend = isRunning ? "Running" : "NotRunning";
                     System.IO.File.AppendAllText(GetLogFilePath(), $"[MessageListenerRegistered] Sending initial message: {messageToSend}" + Environment.NewLine);
-                    currentWebView?.PostMessage(messageToSend);
+                    currentWebView?.PostMessage(messageToSend, null);
                     return;
                 }
 
@@ -433,12 +713,26 @@ namespace MCPExtension
                             // Check actual server status after start
                             var isRunning = parentPanel.McpServer?.IsRunning ?? false;
                             var messageToSend = isRunning ? "Running" : "NotRunning";
+                            System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] Server IsRunning: {isRunning}" + Environment.NewLine);
                             System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] Sending message after start: {messageToSend}" + Environment.NewLine);
+                            
+                            // Check if there was an error in the result (port in use, etc.)
+                            if (result.Contains("Error") || result.Contains("address already in use"))
+                            {
+                                messageToSend = "Error";
+                                System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] Error detected in result, sending Error message" + Environment.NewLine);
+                            }
                             
                             // Post message back to UI thread
                             Application.Instance.Invoke(() =>
                             {
-                                currentWebView?.PostMessage(messageToSend);
+                                System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] About to call PostMessage with message: {messageToSend}" + Environment.NewLine);
+                                
+                                // PostMessage expects (message, data) parameters
+                                // The JavaScript will receive event.data = { message: "Running", data: null }
+                                currentWebView?.PostMessage(messageToSend, null);
+                                
+                                System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] PostMessage completed" + Environment.NewLine);
                             });
                         }
                         catch (Exception ex)
@@ -446,7 +740,7 @@ namespace MCPExtension
                             System.IO.File.AppendAllText(GetLogFilePath(), $"[startEngine] Exception in background thread: {ex.Message}" + Environment.NewLine);
                             Application.Instance.Invoke(() =>
                             {
-                                currentWebView?.PostMessage("NotRunning");
+                                currentWebView?.PostMessage("Error", null);
                             });
                         }
                     });
@@ -472,7 +766,7 @@ namespace MCPExtension
                             // Post message back to UI thread
                             Application.Instance.Invoke(() =>
                             {
-                                currentWebView?.PostMessage(messageToSend);
+                                currentWebView?.PostMessage(messageToSend, null);
                             });
                         }
                         catch (Exception ex)
@@ -480,9 +774,17 @@ namespace MCPExtension
                             System.IO.File.AppendAllText(GetLogFilePath(), $"[stopEngine] Exception in background thread: {ex.Message}" + Environment.NewLine);
                             Application.Instance.Invoke(() =>
                             {
-                                currentWebView?.PostMessage("NotRunning");
+                                currentWebView?.PostMessage("NotRunning", null);
                             });
                         }
+                    });
+                }
+                else if (e.Message.Contains("showDevTools"))
+                {
+                    System.IO.File.AppendAllText(GetLogFilePath(), "[showDevTools] Opening developer tools..." + Environment.NewLine);
+                    Application.Instance.Invoke(() =>
+                    {
+                        currentWebView?.ShowDevTools();
                     });
                 }
             }
@@ -534,7 +836,7 @@ namespace MCPExtension
             {
                 System.Diagnostics.Debug.WriteLine($"NotifyServerStarted called with: {connectionInfo}");
                 UpdateStatus($"MCP Server started successfully");
-                currentWebView?.PostMessage("Running");
+                currentWebView?.PostMessage("Running", null);
                 
                 // Also log that we sent the Running message
                 System.Diagnostics.Debug.WriteLine("Sent 'Running' message to WebView");
@@ -552,7 +854,7 @@ namespace MCPExtension
             {
                 System.Diagnostics.Debug.WriteLine($"NotifyServerStartFailed called with: {errorMessage}");
                 UpdateStatus($"Failed to start MCP Server: {errorMessage}");
-                currentWebView?.PostMessage("NotRunning");
+                currentWebView?.PostMessage("NotRunning", null);
             }
             catch (Exception ex)
             {
@@ -566,7 +868,7 @@ namespace MCPExtension
             try
             {
                 UpdateStatus("MCP Server stopped");
-                currentWebView?.PostMessage("NotRunning");
+                currentWebView?.PostMessage("NotRunning", null);
             }
             catch (Exception ex)
             {

@@ -41,6 +41,9 @@ The extension consists of several key components:
 #### Domain Model Tools (`MendixDomainModelTools`)
 - `read_domain_model` - Read current domain model structure with entities and associations
 - `create_entity` - Create new entities with comprehensive support for 9 entity types and attributes
+- `modify_entity` - Modify existing entities by adding, removing, renaming, or updating attributes
+- `update_entity_layout` - Update the visual layout/positioning of entities in the domain model
+- `manage_annotations` - Add, update, remove, or read documentation annotations for entities and associations
 - `create_association` - Create associations between entities with proper relationship types
 - `create_multiple_entities` - Bulk entity creation with mixed entity types support
 - `create_multiple_associations` - Bulk association creation for complex domain models
@@ -255,6 +258,266 @@ The extension provides powerful entity creation capabilities with comprehensive 
 }
 ```
 
+### Entity Modification Examples
+
+The `modify_entity` tool provides comprehensive entity modification capabilities:
+
+#### Adding New Attributes
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Customer",
+  "add_attributes": [
+    {"name": "email", "type": "String"},
+    {"name": "phoneNumber", "type": "String"},
+    {"name": "age", "type": "Integer"}
+  ]
+}
+```
+
+#### Removing Attributes
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Customer",
+  "remove_attributes": ["temporaryField", "unusedAttribute"]
+}
+```
+
+#### Renaming Attributes
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Customer",
+  "rename_attributes": [
+    {"old_name": "firstName", "new_name": "givenName"},
+    {"old_name": "lastName", "new_name": "familyName"}
+  ]
+}
+```
+
+#### Updating Attribute Types
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Product",
+  "update_attributes": [
+    {"name": "quantity", "type": "Long"},
+    {"name": "price", "type": "Decimal"}
+  ]
+}
+```
+
+#### Adding Enumeration Attributes
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Order",
+  "add_attributes": [
+    {
+      "name": "status",
+      "type": "Enumeration",
+      "enumerationValues": ["Pending", "Processing", "Shipped", "Delivered"]
+    },
+    {
+      "name": "priority",
+      "type": "Enumeration",
+      "enumeration_name": "PriorityEnum"
+    }
+  ]
+}
+```
+
+#### Combined Operations
+```json
+{
+  "module_name": "MyFirstModule",
+  "entity_name": "Customer",
+  "add_attributes": [
+    {"name": "loyaltyPoints", "type": "Integer"}
+  ],
+  "remove_attributes": ["oldField"],
+  "rename_attributes": [
+    {"old_name": "createdDate", "new_name": "registrationDate"}
+  ],
+  "update_attributes": [
+    {"name": "accountBalance", "type": "Decimal"}
+  ]
+}
+```
+
+**Note**: All modification operations are executed in a single transaction. Changes are applied in order: add, remove, rename, update.
+
+### Entity Layout Management Examples
+
+The `update_entity_layout` tool provides multiple layout modes to organize your domain model visually:
+
+#### Grid Layout (Default)
+Arrange entities in a neat grid pattern:
+```json
+{
+  "module_name": "MyFirstModule",
+  "layout_mode": "grid",
+  "columns": 5,
+  "spacing_x": 250,
+  "spacing_y": 200,
+  "start_x": 20,
+  "start_y": 20
+}
+```
+
+#### Horizontal Layout
+Arrange entities in a horizontal line:
+```json
+{
+  "module_name": "MyFirstModule",
+  "layout_mode": "horizontal",
+  "spacing": 300,
+  "start_x": 50,
+  "y": 100
+}
+```
+
+#### Vertical Layout
+Arrange entities in a vertical line:
+```json
+{
+  "module_name": "MyFirstModule",
+  "layout_mode": "vertical",
+  "spacing": 250,
+  "x": 100,
+  "start_y": 50
+}
+```
+
+#### Circular Layout
+Arrange entities in a circle:
+```json
+{
+  "module_name": "MyFirstModule",
+  "layout_mode": "circular",
+  "radius": 400,
+  "center_x": 500,
+  "center_y": 400
+}
+```
+
+#### Custom Positioning
+Specify exact positions for specific entities:
+```json
+{
+  "module_name": "MyFirstModule",
+  "layout_mode": "custom",
+  "entity_positions": [
+    {"entity_name": "Customer", "x": 100, "y": 100},
+    {"entity_name": "Order", "x": 400, "y": 100},
+    {"entity_name": "Product", "x": 700, "y": 100},
+    {"entity_name": "OrderLine", "x": 400, "y": 300}
+  ]
+}
+```
+
+**Note**: The layout tool updates entity positions in the domain model editor. This helps organize complex models for better readability and maintainability.
+
+### Annotation Management Examples
+
+The `manage_annotations` tool provides comprehensive documentation management for entities and associations:
+
+#### Add/Update Entity Annotations
+Document your entities for better team understanding:
+```json
+{
+  "module_name": "MyFirstModule",
+  "action": "set",
+  "entity_annotations": [
+    {
+      "entity_name": "Customer",
+      "documentation": "Represents a customer in the system. Contains personal information and contact details."
+    },
+    {
+      "entity_name": "Order",
+      "documentation": "Customer order with line items and shipping information. Links to Customer via association."
+    },
+    {
+      "entity_name": "Product",
+      "documentation": "Product catalog entry with pricing and inventory tracking."
+    }
+  ]
+}
+```
+
+#### Add/Update Association Annotations
+Document relationships between entities:
+```json
+{
+  "module_name": "MyFirstModule",
+  "action": "set",
+  "association_annotations": [
+    {
+      "association_name": "Customer_Order",
+      "documentation": "Links customers to their orders. One customer can have multiple orders."
+    },
+    {
+      "association_name": "Order_OrderLine",
+      "documentation": "Contains the line items for an order. Each order can have multiple line items."
+    }
+  ]
+}
+```
+
+#### Combined Annotations
+Update both entities and associations in one call:
+```json
+{
+  "module_name": "MyFirstModule",
+  "action": "set",
+  "entity_annotations": [
+    {"entity_name": "Customer", "documentation": "Customer master data"}
+  ],
+  "association_annotations": [
+    {"association_name": "Customer_Address", "documentation": "Customer's delivery addresses"}
+  ]
+}
+```
+
+#### Read All Annotations
+Get all current annotations in a module:
+```json
+{
+  "module_name": "MyFirstModule",
+  "action": "read"
+}
+```
+
+Returns detailed information including:
+- All entities with their documentation
+- All associations with their documentation
+- Summary statistics (total entities, annotated entities, etc.)
+- Boolean flag indicating which have annotations
+
+#### Remove Annotations
+Clear documentation from specific entities or associations:
+```json
+{
+  "module_name": "MyFirstModule",
+  "action": "remove",
+  "entity_names": ["TempEntity", "ObsoleteEntity"],
+  "association_names": ["OldAssociation"]
+}
+```
+
+**Use Cases**:
+- **Onboarding**: Help new developers understand the domain model
+- **Documentation**: Maintain inline documentation for complex models
+- **Compliance**: Document entities with sensitive data or PII
+- **Architecture**: Explain design decisions and relationships
+- **Maintenance**: Track deprecated or legacy entities
+
+**Notes**: 
+- Annotations appear in Mendix Studio Pro as documentation tooltips when hovering over entities and associations
+- Annotations help maintain model clarity and serve as inline documentation
+- **Limitation**: Domain model-level annotations (the annotation text box in the domain model diagram itself) are NOT supported by the Mendix Extensions API. The API can only access entity and association annotations, not the visual diagram annotations.
+
 ### Parameter Documentation
 
 All MCP tools include comprehensive JSON schemas with:
@@ -422,15 +685,31 @@ The extension correctly maps association types as follows:
 
 ### Missing Functionality
 
-#### 7. Entity Update Capability
-- **Status**: 🟠 Medium Priority
-- **Issue**: Can create or delete entities, but cannot add attributes to existing entities
-- **Current Workaround**: Delete and recreate entire entity
-- **Impact**: Data loss risk, workflow inefficiency
-- **Required Tools**:
-  - `add_attribute_to_entity` - Add new attributes to existing entities
-  - `update_attribute` - Modify existing attribute properties
-  - `remove_attribute` - Delete specific attributes without removing entity
+#### 7. ✅ ENHANCED - Entity Update Capability (November 2025)
+- **Status**: ✅ Enhanced
+- **Issue**: Could create or delete entities, but couldn't modify existing entities (add/remove/rename attributes)
+- **Gap**: Required deleting and recreating entire entity to make simple changes (data loss risk)
+- **Enhancement**: Added `modify_entity` tool with comprehensive modification capabilities
+  - **Add attributes**: Add new attributes to existing entities with full type support
+  - **Remove attributes**: Delete specific attributes without removing entity
+  - **Rename attributes**: Change attribute names while preserving data
+  - **Update attribute types**: Change attribute types (recreates attribute)
+  - **Enumeration support**: Add enumeration attributes using existing enums or new values
+  - **Combined operations**: Perform multiple operations in a single transaction
+- **Safety**: All operations execute in single transaction (rollback on failure)
+- **Feedback**: Returns detailed change log showing success/warning/error for each operation
+- **Usage**: 
+  ```json
+  {
+    "module_name": "MyFirstModule",
+    "entity_name": "Customer",
+    "add_attributes": [{"name": "email", "type": "String"}],
+    "remove_attributes": ["oldField"],
+    "rename_attributes": [{"old_name": "firstName", "new_name": "givenName"}],
+    "update_attributes": [{"name": "age", "type": "Integer"}]
+  }
+  ```
+- **Commit**: [current]
 
 #### 8. Lightweight Discovery Tools
 - **Status**: 🟠 Medium Priority
