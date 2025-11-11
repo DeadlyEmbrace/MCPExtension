@@ -27,8 +27,10 @@ Understanding these limitations is crucial for:
 4. [Association Management Limitations](#association-management-limitations)
 5. [Enumeration Limitations](#enumeration-limitations)
 6. [Project Information Limitations](#project-information-limitations)
-7. [Summary Table](#summary-table)
-8. [Workarounds](#workarounds)
+7. [Navigation Profile Limitations](#navigation-profile-limitations)
+8. [Document Deletion Limitations](#document-deletion-limitations)
+9. [Summary Table](#summary-table)
+10. [Workarounds](#workarounds)
 
 ---
 
@@ -464,9 +466,128 @@ Or use the extension to:
 
 ---
 
+## Navigation Profile Limitations
+
+### 10. Navigation Profile Access
+
+**Status**: ❌ NOT SUPPORTED  
+**Severity**: Medium  
+**Impact**: Cannot list or remove navigation items programmatically
+
+#### Description
+The Extensions API provides `INavigationManagerService.PopulateWebNavigationWith()` for adding pages to navigation, but does NOT provide methods to read existing navigation items or remove them. Navigation profiles are not exposed as queryable documents.
+
+#### What Works
+- ✅ Adding pages to responsive web navigation profile
+- ✅ Bulk page addition to navigation
+
+#### What Doesn't Work
+- ❌ Listing current navigation items
+- ❌ Reading navigation profile structure
+- ❌ Removing navigation items
+- ❌ Checking for duplicate navigation items
+- ❌ Clearing navigation
+- ❌ Modifying existing navigation items
+
+#### API Evidence
+```csharp
+// Adding pages works
+_navigationManagerService.PopulateWebNavigationWith(model, pages);  // ✅ Works
+
+// But no methods exist for:
+var navItems = model.GetNavigationItems();  // ❌ Method doesn't exist
+var profiles = model.GetNavigationProfiles();  // ❌ Method doesn't exist
+navigationProfile.Remove(page);  // ❌ Can't access navigation profile
+```
+
+#### Investigation Results
+```csharp
+// Attempted to find navigation documents
+var allDocuments = model.Root.GetModules()
+    .SelectMany(m => model.Root.GetModuleDocuments(m))
+    .Where(d => d.GetType().Name.Contains("Navigation"))
+    .ToList();
+// Result: No navigation documents found through GetModuleDocuments
+```
+
+#### Workaround
+Users must manually manage navigation in Studio Pro:
+1. Open Studio Pro
+2. Go to Navigation pane (View → Navigation or F4)
+3. Manually add/remove/reorder navigation items
+4. For removing duplicates: Delete unwanted items from navigation tree
+5. Save the model
+
+To prevent duplicates when using the extension:
+1. Keep track of what pages have been added to navigation externally
+2. Only add pages once
+3. Check navigation manually in Studio Pro before adding more pages
+
+#### Related Tools
+- `add_pages_to_navigation` - Adds pages but warns about duplicate checking limitation
+- `list_navigation_items` - Explores navigation document types (diagnostic only)
+- `remove_pages_from_navigation` - Returns API limitation message with manual steps
+
+---
+
+## Document Deletion Limitations
+
+### 11. Document Deletion Not Supported
+
+**Status**: ❌ NOT SUPPORTED  
+**Severity**: Medium  
+**Impact**: Cannot delete pages, microflows, folders, or other documents programmatically
+
+#### Description
+The Extensions API does NOT provide methods to delete document-level elements like pages, microflows, folders, or other project documents. Only domain model elements can be deleted programmatically using `IDomainModel.RemoveEntity()`.
+
+#### What Works
+- ✅ Deleting entities (`domainModel.RemoveEntity()`)
+- ✅ Deleting attributes (through entity modification)
+- ✅ Deleting associations (`domainModel.RemoveAssociation()`)
+- ✅ Deleting enumerations (delete and recreate)
+
+#### What Doesn't Work
+- ❌ Deleting pages
+- ❌ Deleting microflows
+- ❌ Deleting folders
+- ❌ Deleting any document types
+- ❌ Deleting nanoflows
+- ❌ Deleting layouts
+- ❌ Deleting snippets
+
+#### API Evidence
+```csharp
+// Domain model deletion works
+domainModel.RemoveEntity(entity);  // ✅ Works
+domainModel.RemoveAssociation(association);  // ✅ Works
+
+// But document deletion doesn't exist
+page.Delete();  // ❌ Method doesn't exist
+microflow.Delete();  // ❌ Method doesn't exist
+model.DeleteDocument(page);  // ❌ Method doesn't exist
+```
+
+#### Architectural Reason
+The Extensions API exposes the **model layer** (entities, attributes, associations) but provides limited access to the **project structure layer** (documents, folders, files). Document creation is supported through specialized services, but deletion is not exposed.
+
+#### Workaround
+Users must manually delete documents in Studio Pro:
+1. Open the project in Mendix Studio Pro
+2. Navigate to the document in the Project Explorer
+3. Right-click the document (page/microflow/folder)
+4. Select "Delete" from context menu
+5. Confirm deletion
+6. Save the model
+
+#### Related Tools
+- `delete_model_element` - Supports domain model elements, warns about document limitation
+
+---
+
 ## Project Information Limitations
 
-### 10. Limited Error Information
+### 12. Limited Error Information
 
 **Status**: ⚠️ PARTIALLY SUPPORTED  
 **Severity**: LOW  
@@ -519,6 +640,9 @@ Users should use Studio Pro's built-in consistency checker for comprehensive err
 | Advanced Association Config | ⚠️ Partial | Low | Manual in Studio Pro | Associations |
 | Enumeration Captions | ⚠️ Issue | Low | Display name instead | Enumerations |
 | Enumeration Modification | ❌ Not Implemented | Medium | Delete & Recreate | Enumerations |
+| Navigation Profile Access | ❌ Not Supported | Medium | Manual in Studio Pro | Navigation Management |
+| Navigation Duplicate Checking | ❌ Not Supported | Low | Track externally | Navigation Quality |
+| Document Deletion | ❌ Not Supported | Medium | Manual in Studio Pro | **Document Management** |
 | Project Error Details | ⚠️ Limited | Low | Studio Pro Errors Panel | Error Checking |
 
 ### Legend
@@ -630,6 +754,7 @@ All searches returned zero results for configuration properties, confirming API 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-11-11 | Initial documentation of discovered API limitations |
+| 1.1 | 2025-11-11 | Added navigation profile limitations and document deletion limitations |
 
 ---
 
