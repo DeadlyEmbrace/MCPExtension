@@ -470,6 +470,7 @@ if (parentEntity == null)
                                         var enumValues = attrObj["enumerationValues"]?.AsArray()
                                             ?.Select(v => v?.ToString())
                                             ?.Where(v => !string.IsNullOrEmpty(v))
+                                            ?.Cast<string>() // Cast to non-nullable after null filtering
                                             ?.ToList();
 
                                         if (enumValues != null && enumValues.Any())
@@ -1181,9 +1182,52 @@ if (parentEntity == null)
 
         private IEnumerationAttributeType CreateEnumerationType(IModel model, string attributeName, List<string> enumValues, IModule module)
         {
-            var attributeEnum = model.Create<IEnumerationAttributeType>();
+            // Check if an enumeration with the same name and values already exists in the module
+            var desiredEnumName = attributeName + "Enum";
+            var existingEnumerations = model.Root.GetModuleDocuments<IEnumeration>(module).ToList();
+            
+            foreach (var existingEnum in existingEnumerations)
+            {
+                // Check if the enumeration name matches
+                if (existingEnum.Name.Equals(desiredEnumName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Check if the values match exactly
+                    var existingValues = existingEnum.GetValues().Select(v => v.Name).ToList();
+                    
+                    if (existingValues.Count == enumValues.Count && 
+                        existingValues.OrderBy(v => v).SequenceEqual(enumValues.OrderBy(v => v)))
+                    {
+                        // Enumeration with same name and values exists - reuse it
+                        _logger.LogInformation($"Reusing existing enumeration '{existingEnum.Name}' in module '{module.Name}'");
+                        var attributeEnum = model.Create<IEnumerationAttributeType>();
+                        attributeEnum.Enumeration = existingEnum.QualifiedName;
+                        return attributeEnum;
+                    }
+                }
+            }
+
+            // No matching enumeration found - create a new one
+            var newAttributeEnum = model.Create<IEnumerationAttributeType>();
             var enumDoc = model.Create<IEnumeration>();
-            enumDoc.Name = GetUniqueName(attributeName + "Enum");
+            
+            // Check if the base name is already taken (by a different enumeration)
+            var finalEnumName = desiredEnumName;
+            var existingNames = existingEnumerations.Select(e => e.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
+            if (existingNames.Contains(finalEnumName))
+            {
+                // Name exists but with different values - append a number
+                int counter = 1;
+                do
+                {
+                    finalEnumName = $"{desiredEnumName}{counter}";
+                    counter++;
+                } while (existingNames.Contains(finalEnumName));
+                
+                _logger.LogWarning($"Enumeration name '{desiredEnumName}' already exists with different values. Using '{finalEnumName}' instead.");
+            }
+            
+            enumDoc.Name = finalEnumName;
 
             foreach (var value in enumValues)
             {
@@ -1198,8 +1242,10 @@ if (parentEntity == null)
             }
 
             module.AddDocument(enumDoc);
-            attributeEnum.Enumeration = enumDoc.QualifiedName;
-            return attributeEnum;
+            newAttributeEnum.Enumeration = enumDoc.QualifiedName;
+            
+            _logger.LogInformation($"Created new enumeration '{enumDoc.Name}' in module '{module.Name}'");
+            return newAttributeEnum;
         }
 
         private AssociationType MapAssociationType(string type)
@@ -1241,28 +1287,6 @@ if (parentEntity == null)
             int y = StartY + (row * SpacingY);
             
             entity.Location = new Location(x, y);
-        }
-
-        private static readonly HashSet<string> UsedNames = new HashSet<string>();
-
-        private string GetUniqueName(string baseName)
-        {
-            if (!UsedNames.Contains(baseName))
-            {
-                UsedNames.Add(baseName);
-                return baseName;
-            }
-
-            int counter = 1;
-            string uniqueName;
-            do
-            {
-                uniqueName = $"{baseName}{counter}";
-                counter++;
-            } while (UsedNames.Contains(uniqueName));
-
-            UsedNames.Add(uniqueName);
-            return uniqueName;
         }
 
         private string DeleteEntity(IDomainModel domainModel, string entityName)
@@ -1554,6 +1578,7 @@ if (parentEntity == null)
                             var enumValues = attrObj["enumerationValues"]?.AsArray()
                                 ?.Select(v => v?.ToString())
                                 ?.Where(v => !string.IsNullOrEmpty(v))
+                                ?.Cast<string>() // Cast to non-nullable after null filtering
                                 ?.ToList();
 
                             if (enumValues != null && enumValues.Any())
@@ -1629,6 +1654,7 @@ if (parentEntity == null)
                             var enumValues = attrObj["enumerationValues"]?.AsArray()
                                 ?.Select(v => v?.ToString())
                                 ?.Where(v => !string.IsNullOrEmpty(v))
+                                ?.Cast<string>() // Cast to non-nullable after null filtering
                                 ?.ToList();
 
                             if (enumValues != null && enumValues.Any())
